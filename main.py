@@ -70,7 +70,7 @@ from models import create_model
 # print("   ✅ models imported", flush=True)
 
 # print("📊 Importing datasets...", flush=True)
-from datasets import build_dataset
+from datasets import build_dataset, BigVisionImageNetDataset
 # print("   ✅ datasets imported", flush=True)
 from engine import train_one_epoch, evaluate
 # print("   ✅ engine imported", flush=True)
@@ -238,8 +238,36 @@ def get_args_parser():
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
     parser.add_argument('--imagenet_default_mean_and_std', type=str2bool, default=True)
-    parser.add_argument('--data_set', default='IMNET', choices=['CIFAR', 'IMNET', 'IMNET_WDS', 'IMNET_FFCV', 'IMNET_HDF5', 'image_folder'],
-                        type=str, help='ImageNet dataset path')
+    parser.add_argument('--data_set', default='IMNET', choices=['IMNET', 'imagenet2012'],
+                        type=str, help='Dataset key. The big_vision loader currently supports ImageNet TFDS only.')
+    parser.add_argument('--tfds_data_dir', default=None, type=str,
+                        help='Directory containing TFDS-prepared ImageNet data. Defaults to data_path when unset.')
+    parser.add_argument('--tfds_train_split', default='train', type=str,
+                        help='TFDS split string for training data (e.g. "train" or "train[:99%]").')
+    parser.add_argument('--tfds_eval_split', default='validation', type=str,
+                        help='TFDS split string for evaluation data.')
+    parser.add_argument('--tfds_shuffle_buffer', default=250_000, type=int,
+                        help='Shuffle buffer size for the tf.data training pipeline.')
+    parser.add_argument('--tfds_cache_raw', type=str2bool, default=False,
+                        help='Cache raw TFDS examples before preprocessing (trades RAM for speed).')
+    parser.add_argument('--tfds_cache_eval', type=str2bool, default=False,
+                        help='Cache evaluation dataset after preprocessing.')
+    parser.add_argument('--tfds_prefetch', default=2, type=int,
+                        help='Prefetch depth for tf.data pipelines.')
+    parser.add_argument('--tfds_num_parallel_calls', default=100, type=int,
+                        help='Number of parallel calls for preprocessing map.')
+    parser.add_argument('--tfds_private_threadpool_size', default=48, type=int,
+                        help='Private threadpool size for tf.data host workers.')
+    parser.add_argument('--tfds_skip_decode', type=str2bool, default=True,
+                        help='Skip TFDS automatic decoding so big_vision ops decode images.')
+    parser.add_argument('--big_vision_pp_train', type=str,
+                        default='decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep("image", "label")',
+                        help='big_vision preprocessing pipeline string for training.')
+    parser.add_argument('--big_vision_pp_eval', type=str,
+                        default='decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep("image", "label")',
+                        help='big_vision preprocessing pipeline string for evaluation.')
+    parser.add_argument('--big_vision_normalize', type=str, default='imagenet', choices=['imagenet', 'none'],
+                        help='Per-sample normalization applied after preprocessing.')
     parser.add_argument('--cache_dataset_in_ram', action='store_true', default=False,
                         help='Cache entire dataset in RAM for ultra-fast access (requires sufficient RAM, optimizes GCS bucket access)')
     parser.add_argument('--output_dir', default='/home/tlu37/scratchdkhasha1/tlu37/Distillation/models_imagenet/dyt',
@@ -388,36 +416,31 @@ def main(args):
         else:
             dataset_val, _ = build_dataset(is_train=False, args=args)
     
-    # Check if we're using FFCV (which returns loaders, not datasets)
-    is_ffcv = args.data_set == 'IMNET_FFCV'
-
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
 
-    if is_ffcv:
-        # FFCV handles sampling internally
-        sampler_train = None
-        sampler_val = None
-        print("Using FFCV - samplers handled internally")
-    else:
-        if args.distributed:
-            sampler_train = torch.utils.data.DistributedSampler(
-                dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True, seed=args.seed,
-            )
-            print("Sampler_train = %s" % str(sampler_train))
-            if args.dist_eval:
-                if len(dataset_val) % num_tasks != 0:
-                    print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
-                            'This will slightly alter validation results as extra duplicate entries are added to achieve '
-                            'equal num of samples per-process.')
-                sampler_val = torch.utils.data.DistributedSampler(
-                    dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False)
-            else:
-                sampler_val = torch.utils.data.SequentialSampler(dataset_val)
-        else:
-            # Single device training
-            sampler_train = None
-            sampler_val = None if dataset_val is None else torch.utils.data.SequentialSampler(dataset_val)
+    is_bigvision_train = isinstance(dataset_train, BigVisionImageNetDataset)
+    is_bigvision_val = isinstance(dataset_val, BigVisionImageNetDataset)
+
+    sampler_train = None
+    sampler_val = None
+
+    if args.distributed and dataset_train is not None and not is_bigvision_train:
+        sampler_train = torch.utils.data.DistributedSampler(
+            dataset_train, num_replicas=num_tasks, rank=global_rank,
+            shuffle=True, seed=args.seed)
+        print("Sampler_train = %s" % str(sampler_train))
+
+    if dataset_val is not None:
+        if args.distributed and args.dist_eval and not is_bigvision_val:
+            if len(dataset_val) % num_tasks != 0:
+                print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
+                      'This will slightly alter validation results as extra duplicate entries are added to achieve '
+                      'equal num of samples per-process.')
+            sampler_val = torch.utils.data.DistributedSampler(
+                dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False)
+        elif not is_bigvision_val:
+            sampler_val = torch.utils.data.SequentialSampler(dataset_val)
 
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
@@ -440,40 +463,53 @@ def main(args):
     else:
         wandb_logger = None
 
-    if is_ffcv:
-        # FFCV returns loaders directly
-        data_loader_train = dataset_train
-        data_loader_val = dataset_val
-        print("Using FFCV loaders directly")
-    else:
-        # For TPU, disable DataLoader multiprocessing but use MpDeviceLoader for parallelism
-        tpu_mode = args.tpu or hasattr(args, '_xla_device')
+    # For TPU, disable DataLoader multiprocessing but use MpDeviceLoader for parallelism
+    tpu_mode = args.tpu or hasattr(args, '_xla_device')
+
+    if dataset_train is not None:
         if tpu_mode:
-            num_workers = 0  # Avoid pickle issues, we'll use MpDeviceLoader instead
-            pin_memory = False  # TPU doesn't use pinned memory
-            print(f"TPU mode: Using num_workers=0 to avoid pickle issues, will use MpDeviceLoader for parallelism")
+            num_workers_train = 0
+            pin_memory_train = False
+            print("TPU mode: Using num_workers=0 to avoid pickle issues, will use MpDeviceLoader for parallelism")
+        elif is_bigvision_train:
+            num_workers_train = 0
+            pin_memory_train = False
+            print("big_vision loader: forcing num_workers=0 and pin_memory=False to reuse tf.data threads")
         else:
-            num_workers = args.num_workers
-            pin_memory = args.pin_mem
-        
+            num_workers_train = args.num_workers
+            pin_memory_train = args.pin_mem
+
         data_loader_train = torch.utils.data.DataLoader(
             dataset_train, sampler=sampler_train,
             batch_size=args.batch_size,
-            num_workers=num_workers,
-            pin_memory=pin_memory,
+            num_workers=num_workers_train,
+            pin_memory=pin_memory_train,
             drop_last=True,
         )
+    else:
+        data_loader_train = None
 
-        if dataset_val is not None:
-            data_loader_val = torch.utils.data.DataLoader(
-                dataset_val, sampler=sampler_val,
-                batch_size=int(1.5 * args.batch_size),
-                num_workers=num_workers,
-                pin_memory=pin_memory,
-                drop_last=False,
-            )
+    if dataset_val is not None:
+        if tpu_mode or is_bigvision_val:
+            num_workers_val = 0
+            pin_memory_val = False
+            if tpu_mode:
+                print("TPU mode: validation loader using num_workers=0")
+            else:
+                print("big_vision loader (eval): forcing num_workers=0 and pin_memory=False")
         else:
-            data_loader_val = None
+            num_workers_val = args.num_workers
+            pin_memory_val = args.pin_mem
+
+        data_loader_val = torch.utils.data.DataLoader(
+            dataset_val, sampler=sampler_val,
+            batch_size=int(1.5 * args.batch_size),
+            num_workers=num_workers_val,
+            pin_memory=pin_memory_val,
+            drop_last=False,
+        )
+    else:
+        data_loader_val = None
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -655,15 +691,9 @@ def main(args):
     total_batch_size = args.batch_size * args.update_freq * world_size
     print(f"Calculated total_batch_size = {total_batch_size}")
     
-    if is_ffcv:
-        # FFCV doesn't have len(), estimate from quality splits
-        if 'high' in args.data_path.lower() or 'low' in args.data_path.lower():
-            estimated_samples = 640000  # Quality split size
-        else:
-            estimated_samples = 1281167  # Full ImageNet
-        num_training_steps_per_epoch = estimated_samples // total_batch_size
-        print("FFCV mode - using estimated samples for scheduling")
-        print("Estimated training examples = %d" % estimated_samples)
+    if dataset_train is None:
+        num_training_steps_per_epoch = 0
+        print("Dataset is not instantiated on this process; skipping local step computation")
     else:
         num_training_steps_per_epoch = len(dataset_train) // total_batch_size
         print("Number of training examples = %d" % len(dataset_train))
@@ -889,19 +919,20 @@ def main(args):
         epoch_start_time = time.time()
         between_epochs_delay = epoch_start_time - last_epoch_end_time
         print(f"Starting epoch {epoch} (delay since last epoch: {between_epochs_delay:.2f}s)...", flush=True)
-        if args.distributed:
+        if args.distributed and data_loader_train is not None:
             print("Setting sampler epoch...", flush=True)
             sampler_start = time.time()
             # Use original sampler if we wrapped with MpDeviceLoader
+            sampler_obj = None
             if original_train_sampler is not None:
-                print(f"About to call original_train_sampler.set_epoch({epoch})...", flush=True)
-                original_train_sampler.set_epoch(epoch)
+                sampler_obj = original_train_sampler
+            elif hasattr(data_loader_train, 'sampler'):
+                sampler_obj = getattr(data_loader_train, 'sampler', None)
+            if sampler_obj is not None and hasattr(sampler_obj, 'set_epoch'):
+                print(f"About to call sampler.set_epoch({epoch})...", flush=True)
+                sampler_obj.set_epoch(epoch)
                 sampler_time = time.time() - sampler_start
-                print(f"✅ original_train_sampler.set_epoch({epoch}) completed in {sampler_time:.2f}s", flush=True)
-            else:
-                data_loader_train.sampler.set_epoch(epoch)
-                sampler_time = time.time() - sampler_start
-                print(f"✅ data_loader_train.sampler.set_epoch({epoch}) completed in {sampler_time:.2f}s", flush=True)
+                print(f"✅ sampler.set_epoch({epoch}) completed in {sampler_time:.2f}s", flush=True)
         if log_writer is not None:
             print("Setting log writer step...", flush=True)
             log_writer.set_step(epoch * num_training_steps_per_epoch * args.update_freq)
@@ -1084,3 +1115,4 @@ if __name__ == "__main__":
     else:
         # Non-TPU path can run in a single process
         main(args)
+
