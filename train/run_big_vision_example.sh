@@ -24,20 +24,19 @@ mkdir -p "${LOG_DIR}"
 python3 -u main.py \
   --data_set IMNET \
   --tfds_data_dir "${TFDS_DATA_DIR}" \
-  --tfds_train_split 'train[:99%]' \
-  --tfds_eval_split 'train[99%:]' \
+  --tfds_train_split 'train' \
+  --tfds_eval_split 'validation' \
   --tfds_cache_raw False \
   --tfds_cache_eval False \
   --big_vision_pp_train 'decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep("image", "label")' \
   --big_vision_pp_eval 'decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep("image", "label")' \
-  --batch_size 128 \
-  --epochs 1 \
+  --batch_size 256 \
+  --epochs 300 \
   --model vit_tiny_patch16_224 \
-  --lr 0.0005 \
+  --lr 0.003 \
   --update_freq 1 \
   --output_dir "${OUTPUT_DIR}" \
   --log_dir "${LOG_DIR}" \
   --enable_wandb False \
-  --dist_eval False \
+  --dist_eval True \
   --tpu True
-
