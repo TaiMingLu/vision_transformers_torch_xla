@@ -1,0 +1,81 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/eb7vg93p
+TPU mode: Using num_workers=0 to avoid pickle issues, will use MpDeviceLoader for parallelism
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 32
+Calculated total_batch_size = 4096
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 4096
+Update frequent = 1
+Number of training steps per epoch = 312
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: Using name-only parameter grouping to avoid XLA compilation
+TPU mode: Collecting parameter names...
+TPU mode: Found 152 trainable parameters
+TPU mode: Grouping parameters by names...
+Processing parameter 1/152: cls_token
+Processing parameter 51/152: blocks.3.mlp.fc2.weight
+Processing parameter 101/152: blocks.8.norm1.weight
+Processing parameter 151/152: head.weight
+TPU mode: Parameter names grouped successfully
+TPU mode: Mapping names to tensors...
+TPU mode: All 152 parameters mapped successfully
+Parameter iteration completed! Processed 152 parameters.
+TPU mode: Created 2 parameter groups, returning optimizer groups...
+Parameter groups created successfully
+Optimizer created successfully
+TPU mode: Skipping loss scaler (XLA handles mixed precision)
+TPU mode: About to set loss_scaler = None...
+TPU mode: Loss scaler set to None
+About to create Cosine LR scheduler...
+Set warmup steps = 6240
+LR scheduler created successfully
+About to continue to weight decay scheduler...
+About to check args.weight_decay_end...
+Directly setting weight_decay_end to avoid freeze...
+weight_decay_end set to: 0.05
+About to call cosine_scheduler for weight decay...
+Calling with: wd=0.05, wd_end=0.05, epochs=100, steps_per_epoch=312
+Set warmup steps = 0
+cosine_scheduler completed, about to calculate min/max...
+Weight decay schedule created: 0.05 -> 0.05
+About to create criterion...
+Created SoftTargetCrossEntropy criterion
+criterion = SoftTargetCrossEntropy()
+TPU mode: Skipping warmup (caused shape errors), will compile on first iteration
+About to call auto_load_model...
+auto_load_model completed
+About to define get_eval_model helper function...
+get_eval_model function defined
+About to set max_accuracy...
+max_accuracy initialized
+Start training for 100 epochs
+About to record start_time...
+About to enter training loop...
+Starting epoch 0...
+Setting sampler epoch...
+Setting wandb steps...
+About to call train_one_epoch...
+Epoch: [0]  [  0/312]  eta: 12:57:39  loss: 7.0938 (7.0938)  lr: 0.0000 (0.0000)  time: 149.5493  data: 102.5058
+Epoch: [0]  [ 10/312]  eta: 1:30:14  loss: 7.0625 (7.0597)  lr: 0.0000 (0.0000)  time: 17.9291  data: 9.3192
+Epoch: [0]  [ 20/312]  eta: 0:47:38  loss: 7.0312 (7.0491)  lr: 0.0000 (0.0000)  time: 2.8030  data: 0.0005
+Epoch: [0]  [ 30/312]  eta: 0:32:21  loss: 7.0312 (7.0433)  lr: 0.0000 (0.0000)  time: 0.8100  data: 0.0005
+Epoch: [0]  [ 40/312]  eta: 0:24:31  loss: 7.0312 (7.0457)  lr: 0.0000 (0.0000)  time: 0.8091  data: 0.0006
+Epoch: [0]  [ 50/312]  eta: 0:19:42  loss: 7.0625 (7.0447)  lr: 0.0000 (0.0000)  time: 0.8395  data: 0.0006
+Epoch: [0]  [ 60/312]  eta: 0:16:25  loss: 7.0312 (7.0451)  lr: 0.0000 (0.0000)  time: 0.8357  data: 0.0005
+Epoch: [0]  [ 70/312]  eta: 0:14:01  loss: 7.0312 (7.0423)  lr: 0.0000 (0.0000)  time: 0.8265  data: 0.0005
+Epoch: [0]  [ 80/312]  eta: 0:12:09  loss: 7.0312 (7.0417)  lr: 0.0000 (0.0000)  time: 0.8116  data: 0.0006
+Epoch: [0]  [ 90/312]  eta: 0:10:41  loss: 7.0312 (7.0388)  lr: 0.0001 (0.0000)  time: 0.8092  data: 0.0006
+Epoch: [0]  [100/312]  eta: 0:09:29  loss: 7.0000 (7.0347)  lr: 0.0001 (0.0000)  time: 0.8366  data: 0.0005
+Epoch: [0]  [110/312]  eta: 0:08:28  loss: 7.0000 (7.0324)  lr: 0.0001 (0.0000)  time: 0.8346  data: 0.0005
+Epoch: [0]  [120/312]  eta: 0:07:37  loss: 7.0000 (7.0284)  lr: 0.0001 (0.0000)  time: 0.8276  data: 0.0007
+Epoch: [0]  [130/312]  eta: 0:06:51  loss: 7.0000 (7.0250)  lr: 0.0001 (0.0000)  time: 0.8204  data: 0.0008
+Epoch: [0]  [140/312]  eta: 0:06:10  loss: 6.9688 (7.0208)  lr: 0.0001 (0.0000)  time: 0.8019  data: 0.0006
+Epoch: [0]  [150/312]  eta: 0:05:34  loss: 6.9688 (7.0176)  lr: 0.0001 (0.0000)  time: 0.8072  data: 0.0006
+Epoch: [0]  [160/312]  eta: 0:05:02  loss: 6.9688 (7.0153)  lr: 0.0001 (0.0001)  time: 0.8285  data: 0.0006

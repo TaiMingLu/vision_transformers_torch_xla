@@ -1,0 +1,263 @@
+_dataset_train:
+    value: <datasets.HDF5ImageDataset object at 0x72559f243a90>
+_dataset_val:
+    value: <datasets.HDF5ImageDataset object at 0x72559f243130>
+_tpu_spawned_process:
+    value: true
+_wandb:
+    value:
+        cli_version: 0.21.2
+        e:
+            guk50c26y06h1e6uqut5g9llf9fbfx36:
+                args:
+                    - --tpu
+                    - --model
+                    - my_vit_b
+                    - --epochs
+                    - "100"
+                    - --drop_path
+                    - "0.1"
+                    - --batch_size
+                    - "256"
+                    - --update_freq
+                    - "1"
+                    - --model_ema
+                    - "false"
+                    - --model_ema_eval
+                    - "false"
+                    - --data_set
+                    - IMNET_HDF5
+                    - --data_path
+                    - /mnt/ramdisk/imagenet-hdf5
+                    - --output_dir
+                    - /home/terry/models/vanilla
+                    - --experiment
+                    - b-vanilla
+                    - --wandb_mode
+                    - online
+                    - --project
+                    - tpu-vit
+                    - --num_workers
+                    - "12"
+                    - --pin_mem
+                    - "false"
+                    - --save_ckpt_freq
+                    - "100"
+                codePath: main.py
+                codePathLocal: main.py
+                cpu_count: 90
+                cpu_count_logical: 180
+                disk:
+                    /:
+                        total: "103865303040"
+                        used: "19256180736"
+                email: terrytaimingl@gmail.com
+                executable: /usr/bin/python3
+                host: t1v-n-4d0e7bb9-w-11
+                memory:
+                    total: "760425095168"
+                os: Linux-6.8.0-1015-gcp-x86_64-with-glibc2.35
+                program: /home/terry/gcs-bucket/Distillation/vision/train/main.py
+                python: CPython 3.10.12
+                root: /home/terry/gcs-bucket/Distillation/vision/train
+                startedAt: "2025-08-29T13:33:43.067220Z"
+                tpu:
+                    count: 4
+                    devicesPerChip: 1
+                    hbmGib: 32
+                    name: v6e
+                writerId: guk50c26y06h1e6uqut5g9llf9fbfx36
+        m: []
+        python_version: 3.10.12
+        t:
+            "1":
+                - 1
+                - 41
+                - 49
+                - 51
+                - 63
+            "2":
+                - 1
+                - 41
+                - 49
+                - 51
+                - 63
+            "3":
+                - 13
+                - 16
+            "4": 3.10.12
+            "5": 0.21.2
+            "12": 0.21.2
+            "13": linux-x86_64
+_xla_device:
+    value: xla
+aa:
+    value: rand-m9-mstd0.5-inc1
+auto_resume:
+    value: false
+batch_size:
+    value: 256
+cache_dataset_in_ram:
+    value: false
+clip_grad:
+    value: null
+color_jitter:
+    value: 0.4
+crop_pct:
+    value: 0.875
+cutmix:
+    value: 1
+cutmix_minmax:
+    value: null
+data_path:
+    value: /mnt/ramdisk/imagenet-hdf5
+data_set:
+    value: IMNET_HDF5
+device:
+    value: cuda
+disable_eval:
+    value: false
+dist_backend:
+    value: xla
+dist_eval:
+    value: true
+dist_on_itp:
+    value: false
+dist_url:
+    value: env://
+distributed:
+    value: true
+drop_path:
+    value: 0.1
+enable_wandb:
+    value: true
+epochs:
+    value: 100
+eval:
+    value: false
+eval_data_path:
+    value: null
+experiment:
+    value: b-vanilla
+finetune:
+    value: ""
+gpu:
+    value: 0
+head_init_scale:
+    value: 1
+imagenet_default_mean_and_std:
+    value: true
+input_size:
+    value: 224
+kd:
+    value: false
+kd_alpha:
+    value: 0.7
+kd_temperature:
+    value: 4
+layer_decay:
+    value: 1
+layer_scale_init_value:
+    value: 1e-06
+local_rank:
+    value: -1
+log_dir:
+    value: null
+log_freq:
+    value: 1
+lr:
+    value: 0.004
+min_lr:
+    value: 1e-06
+mixup:
+    value: 0.8
+mixup_mode:
+    value: batch
+mixup_prob:
+    value: 1
+mixup_switch_prob:
+    value: 0.5
+model:
+    value: my_vit_b
+model_ema:
+    value: false
+model_ema_decay:
+    value: 0.9999
+model_ema_eval:
+    value: false
+model_ema_force_cpu:
+    value: true
+model_key:
+    value: model|module
+model_prefix:
+    value: ""
+momentum:
+    value: 0.9
+nb_classes:
+    value: 1000
+num_workers:
+    value: 12
+opt:
+    value: adamw
+opt_betas:
+    value: null
+opt_eps:
+    value: 1e-08
+output_dir:
+    value: /home/terry/models/vanilla/b-vanilla
+pin_mem:
+    value: false
+project:
+    value: tpu-vit
+rank:
+    value: 0
+recount:
+    value: 1
+remode:
+    value: pixel
+reprob:
+    value: 0.25
+resplit:
+    value: false
+resume:
+    value: ""
+save_ckpt:
+    value: true
+save_ckpt_freq:
+    value: 100
+save_ckpt_num:
+    value: 3
+seed:
+    value: 0
+smoothing:
+    value: 0.1
+start_epoch:
+    value: 0
+teacher_arch:
+    value: ""
+teacher_path:
+    value: ""
+tpu:
+    value: true
+train_interpolation:
+    value: bicubic
+update_freq:
+    value: 1
+use_amp:
+    value: false
+wandb_ckpt:
+    value: false
+wandb_dir:
+    value: null
+wandb_mode:
+    value: online
+warmup_epochs:
+    value: 20
+warmup_steps:
+    value: -1
+weight_decay:
+    value: 0.05
+weight_decay_end:
+    value: null
+world_size:
+    value: 64

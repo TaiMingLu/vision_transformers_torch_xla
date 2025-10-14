@@ -1,0 +1,154 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/pz3ez9t5
+TPU mode: Using num_workers=0 to avoid pickle issues, will use MpDeviceLoader for parallelism
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 64
+Calculated total_batch_size = 16384
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 16384
+Update frequent = 1
+Number of training steps per epoch = 78
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: Using name-only parameter grouping to avoid XLA compilation
+TPU mode: Collecting parameter names...
+TPU mode: Found 152 trainable parameters
+TPU mode: Grouping parameters by names...
+Processing parameter 1/152: cls_token
+Processing parameter 51/152: blocks.3.mlp.fc2.weight
+Processing parameter 101/152: blocks.8.norm1.weight
+Processing parameter 151/152: head.weight
+TPU mode: Parameter names grouped successfully
+TPU mode: Mapping names to tensors...
+TPU mode: All 152 parameters mapped successfully
+Parameter iteration completed! Processed 152 parameters.
+TPU mode: Created 2 parameter groups, returning optimizer groups...
+Parameter groups created successfully
+Optimizer created successfully
+TPU mode: Skipping loss scaler (XLA handles mixed precision)
+TPU mode: About to set loss_scaler = None...
+TPU mode: Loss scaler set to None
+About to create Cosine LR scheduler...
+Set warmup steps = 1560
+LR scheduler created successfully
+About to continue to weight decay scheduler...
+About to check args.weight_decay_end...
+Directly setting weight_decay_end to avoid freeze...
+weight_decay_end set to: 0.05
+About to call cosine_scheduler for weight decay...
+Calling with: wd=0.05, wd_end=0.05, epochs=100, steps_per_epoch=78
+Set warmup steps = 0
+cosine_scheduler completed, about to calculate min/max...
+Weight decay schedule created: 0.05 -> 0.05
+About to create criterion...
+Created SoftTargetCrossEntropy criterion
+criterion = SoftTargetCrossEntropy()
+TPU mode: Skipping warmup (caused shape errors), will compile on first iteration
+About to call auto_load_model...
+auto_load_model completed
+About to define get_eval_model helper function...
+get_eval_model function defined
+About to set max_accuracy...
+max_accuracy initialized
+Start training for 100 epochs
+About to record start_time...
+About to enter training loop...
+Starting epoch 0...
+Setting sampler epoch...
+Setting wandb steps...
+About to call train_one_epoch...
+🚀 Iteration: 0
+Epoch: [0]  [ 0/78]  eta: 6:05:23  loss: 7.0625 (7.0625)  lr: 0.0000 (0.0000)  time: 281.0766  data: 242.0870
+🚀 Iteration: 1
+🚀 Iteration: 2
+🚀 Iteration: 3
+🚀 Iteration: 4
+🚀 Iteration: 5
+🚀 Iteration: 6
+🚀 Iteration: 7
+🚀 Iteration: 8
+🚀 Iteration: 9
+🚀 Iteration: 10
+Epoch: [0]  [10/78]  eta: 0:33:29  loss: 7.0625 (7.0511)  lr: 0.0000 (0.0000)  time: 29.5579  data: 22.0084
+🚀 Iteration: 11
+🚀 Iteration: 12
+🚀 Iteration: 13
+🚀 Iteration: 14
+🚀 Iteration: 15
+🚀 Iteration: 16
+🚀 Iteration: 17
+🚀 Iteration: 18
+🚀 Iteration: 19
+🚀 Iteration: 20
+Epoch: [0]  [20/78]  eta: 0:15:22  loss: 7.0312 (7.0432)  lr: 0.0000 (0.0000)  time: 2.6527  data: 0.0005
+🚀 Iteration: 21
+🚀 Iteration: 22
+🚀 Iteration: 23
+🚀 Iteration: 24
+🚀 Iteration: 25
+🚀 Iteration: 26
+🚀 Iteration: 27
+🚀 Iteration: 28
+🚀 Iteration: 29
+🚀 Iteration: 30
+Epoch: [0]  [30/78]  eta: 0:08:50  loss: 7.0312 (7.0383)  lr: 0.0001 (0.0000)  time: 0.8892  data: 0.0005
+🚀 Iteration: 31
+🚀 Iteration: 32
+🚀 Iteration: 33
+🚀 Iteration: 34
+🚀 Iteration: 35
+🚀 Iteration: 36
+🚀 Iteration: 37
+🚀 Iteration: 38
+🚀 Iteration: 39
+🚀 Iteration: 40
+Epoch: [0]  [40/78]  eta: 0:05:26  loss: 7.0312 (7.0312)  lr: 0.0001 (0.0001)  time: 0.8854  data: 0.0005
+🚀 Iteration: 41
+🚀 Iteration: 42
+🚀 Iteration: 43
+🚀 Iteration: 44
+🚀 Iteration: 45
+🚀 Iteration: 46
+🚀 Iteration: 47
+🚀 Iteration: 48
+🚀 Iteration: 49
+🚀 Iteration: 50
+Epoch: [0]  [50/78]  eta: 0:03:18  loss: 7.0000 (7.0257)  lr: 0.0001 (0.0001)  time: 0.9302  data: 0.0005
+🚀 Iteration: 51
+🚀 Iteration: 52
+🚀 Iteration: 53
+🚀 Iteration: 54
+🚀 Iteration: 55
+🚀 Iteration: 56
+🚀 Iteration: 57
+🚀 Iteration: 58
+🚀 Iteration: 59
+🚀 Iteration: 60
+Epoch: [0]  [60/78]  eta: 0:01:50  loss: 7.0000 (7.0184)  lr: 0.0001 (0.0001)  time: 1.2069  data: 0.1945
+🚀 Iteration: 61
+🚀 Iteration: 62
+🚀 Iteration: 63
+🚀 Iteration: 64
+🚀 Iteration: 65
+🚀 Iteration: 66
+🚀 Iteration: 67
+🚀 Iteration: 68
+🚀 Iteration: 69
+🚀 Iteration: 70
+Epoch: [0]  [70/78]  eta: 0:00:43  loss: 6.9688 (7.0128)  lr: 0.0002 (0.0001)  time: 1.4240  data: 0.3747
+🚀 Iteration: 71
+🚀 Iteration: 72
+🚀 Iteration: 73
+🚀 Iteration: 74
+🚀 Iteration: 75
+🚀 Iteration: 76
+🚀 Iteration: 77
+Epoch: [0]  [77/78]  eta: 0:00:05  loss: 6.9688 (7.0072)  lr: 0.0002 (0.0001)  time: 1.2476  data: 0.2115
+Epoch: [0] Total time: 0:06:38 (5.1051 s / it)
+Averaged stats: loss: 6.9688 (7.0256)  lr: 0.0002 (0.0001)
+Done train_one_epoch...

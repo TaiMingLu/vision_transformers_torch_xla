@@ -1,0 +1,9 @@
+{"time":"2025-08-28T03:30:36.629396453Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-28T03:30:36.986371052Z","level":"WARN","msg":"GraphQL client is nil, skipping feature loading"}
+{"time":"2025-08-28T03:30:37.099622333Z","level":"INFO","msg":"stream: created new stream","id":"6roydeg5"}
+{"time":"2025-08-28T03:30:37.099825593Z","level":"INFO","msg":"stream: started","id":"6roydeg5"}
+{"time":"2025-08-28T03:30:37.099896083Z","level":"INFO","msg":"handler: started","stream_id":"6roydeg5"}
+{"time":"2025-08-28T03:30:37.099857363Z","level":"INFO","msg":"sender: started","stream_id":"6roydeg5"}
+{"time":"2025-08-28T03:30:37.099855453Z","level":"INFO","msg":"writer: started","stream_id":"6roydeg5"}
+{"time":"2025-08-28T03:30:37.118742391Z","level":"WARN","msg":"runupserter: server does not expand metric globs but the x_server_side_expand_glob_metrics setting is set; ignoring"}
+{"time":"2025-08-28T03:39:53.141341558Z","level":"ERROR","msg":"monitor: error sampling metrics: rpc error: code = Unavailable desc = error reading from server: read tcp 127.0.0.1:33688->127.0.0.1:8431: read: connection reset by peer"}

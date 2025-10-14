@@ -1,0 +1,6 @@
+{"time":"2025-08-29T16:34:29.266498948Z","level":"INFO","msg":"stream: starting","core version":"0.21.2"}
+{"time":"2025-08-29T16:34:30.740747624Z","level":"INFO","msg":"stream: created new stream","id":"lfg4wmoa"}
+{"time":"2025-08-29T16:34:31.052049101Z","level":"INFO","msg":"stream: started","id":"lfg4wmoa"}
+{"time":"2025-08-29T16:34:31.052145101Z","level":"INFO","msg":"handler: started","stream_id":"lfg4wmoa"}
+{"time":"2025-08-29T16:34:31.052180811Z","level":"INFO","msg":"writer: started","stream_id":"lfg4wmoa"}
+{"time":"2025-08-29T16:34:31.052190141Z","level":"INFO","msg":"sender: started","stream_id":"lfg4wmoa"}

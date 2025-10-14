@@ -1,0 +1,7 @@
+{"time":"2025-08-29T05:05:45.37065095Z","level":"INFO","msg":"stream: starting","core version":"0.21.2"}
+{"time":"2025-08-29T05:05:46.400859097Z","level":"INFO","msg":"stream: created new stream","id":"oa8onell"}
+{"time":"2025-08-29T05:05:46.516052905Z","level":"INFO","msg":"stream: started","id":"oa8onell"}
+{"time":"2025-08-29T05:05:46.516153835Z","level":"INFO","msg":"sender: started","stream_id":"oa8onell"}
+{"time":"2025-08-29T05:05:46.516108765Z","level":"INFO","msg":"writer: started","stream_id":"oa8onell"}
+{"time":"2025-08-29T05:05:46.516135235Z","level":"INFO","msg":"handler: started","stream_id":"oa8onell"}
+{"time":"2025-08-29T05:15:06.155074365Z","level":"ERROR","msg":"monitor: error sampling metrics: rpc error: code = Unavailable desc = error reading from server: read tcp 127.0.0.1:46012->127.0.0.1:8431: read: connection reset by peer"}

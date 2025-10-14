@@ -1,0 +1,65 @@
+{
+  "os": "Linux-6.8.0-1015-gcp-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.12",
+  "startedAt": "2025-08-29T15:42:13.473815Z",
+  "args": [
+    "--tpu",
+    "--model",
+    "my_vit_b",
+    "--epochs",
+    "100",
+    "--drop_path",
+    "0.1",
+    "--batch_size",
+    "256",
+    "--update_freq",
+    "1",
+    "--model_ema",
+    "false",
+    "--model_ema_eval",
+    "false",
+    "--data_set",
+    "IMNET_HDF5",
+    "--data_path",
+    "/mnt/ramdisk/imagenet-hdf5",
+    "--output_dir",
+    "/home/terry/models/vanilla",
+    "--experiment",
+    "b-vanilla",
+    "--wandb_mode",
+    "online",
+    "--project",
+    "tpu-vit",
+    "--num_workers",
+    "12",
+    "--pin_mem",
+    "false",
+    "--save_ckpt_freq",
+    "100"
+  ],
+  "program": "/home/terry/gcs-bucket/Distillation/vision/train/main.py",
+  "codePath": "main.py",
+  "codePathLocal": "main.py",
+  "email": "terrytaimingl@gmail.com",
+  "root": "/home/terry/gcs-bucket/Distillation/vision/train",
+  "host": "t1v-n-f8d20d31-w-0",
+  "executable": "/usr/bin/python3",
+  "cpu_count": 90,
+  "cpu_count_logical": 180,
+  "disk": {
+    "/": {
+      "total": "103865303040",
+      "used": "19335417856"
+    }
+  },
+  "memory": {
+    "total": "760425148416"
+  },
+  "tpu": {
+    "name": "v6e",
+    "hbmGib": 32,
+    "devicesPerChip": 1,
+    "count": 4
+  },
+  "writerId": "383swexf5t8c9pe87vx8ra8nqhp2r2e1"
+}

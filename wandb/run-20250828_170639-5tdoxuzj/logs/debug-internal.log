@@ -1,0 +1,8 @@
+{"time":"2025-08-28T17:06:41.17994139Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-28T17:06:41.777026239Z","level":"INFO","msg":"stream: created new stream","id":"5tdoxuzj"}
+{"time":"2025-08-28T17:06:41.826465865Z","level":"INFO","msg":"stream: started","id":"5tdoxuzj"}
+{"time":"2025-08-28T17:06:41.826551805Z","level":"INFO","msg":"sender: started","stream_id":"5tdoxuzj"}
+{"time":"2025-08-28T17:06:41.826468305Z","level":"INFO","msg":"handler: started","stream_id":"5tdoxuzj"}
+{"time":"2025-08-28T17:06:41.826497075Z","level":"INFO","msg":"writer: started","stream_id":"5tdoxuzj"}
+{"time":"2025-08-28T19:58:57.577989647Z","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-08-28T20:35:45.086561495Z","level":"INFO","msg":"api: retrying HTTP error","status":502,"url":"https://api.wandb.ai/files/ttl/tpu-vit/5tdoxuzj/file_stream","body":"\n<html><head>\n<meta http-equiv=\"content-type\" content=\"text/html;charset=utf-8\">\n<title>502 Server Error</title>\n</head>\n<body text=#000000 bgcolor=#ffffff>\n<h1>Error: Server Error</h1>\n<h2>The server encountered a temporary error and could not complete your request.<p>Please try again in 30 seconds.</h2>\n<h2></h2>\n</body></html>\n"}

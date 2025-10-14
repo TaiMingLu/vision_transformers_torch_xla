@@ -1,0 +1,243 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/07vvrkrw
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Using EMA with decay = 0.99990000
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 32
+Calculated total_batch_size = 2048
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 2048
+Update frequent = 1
+Number of training steps per epoch = 625
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: About to call xm.mark_step() before parameter iteration...
+TPU mode: xm.mark_step() completed
+About to iterate through named_parameters...
+Processing parameter 3: patch_embed.proj.weight
+TPU mode: Large tensor patch_embed.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for patch_embed.proj.weight
+Processing parameter 7: blocks.0.attn.qkv.weight
+TPU mode: Large tensor blocks.0.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.0.attn.qkv.weight
+Processing parameter 9: blocks.0.attn.proj.weight
+TPU mode: Large tensor blocks.0.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.0.attn.proj.weight
+Processing parameter 10: blocks.0.attn.proj.bias
+Processing parameter 10: blocks.0.attn.proj.bias
+Processing parameter 13: blocks.0.mlp.fc1.weight
+TPU mode: Large tensor blocks.0.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.0.mlp.fc1.weight
+Processing parameter 15: blocks.0.mlp.fc2.weight
+TPU mode: Large tensor blocks.0.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.0.mlp.fc2.weight
+Processing parameter 19: blocks.1.attn.qkv.weight
+TPU mode: Large tensor blocks.1.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.1.attn.qkv.weight
+Processing parameter 20: blocks.1.attn.qkv.bias
+Processing parameter 20: blocks.1.attn.qkv.bias
+Parameter blocks.1.attn.qkv.bias appended to params list (count: 20)
+Parameter name blocks.1.attn.qkv.bias appended to names list (count: 20)
+Parameter blocks.1.attn.qkv.bias added successfully (count: 20)
+Processing parameter 21: blocks.1.attn.proj.weight
+TPU mode: Large tensor blocks.1.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.1.attn.proj.weight
+Processing parameter 25: blocks.1.mlp.fc1.weight
+TPU mode: Large tensor blocks.1.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.1.mlp.fc1.weight
+Processing parameter 27: blocks.1.mlp.fc2.weight
+TPU mode: Large tensor blocks.1.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.1.mlp.fc2.weight
+Processing parameter 30: blocks.2.norm1.bias
+Processing parameter 30: blocks.2.norm1.bias
+Processing parameter 31: blocks.2.attn.qkv.weight
+TPU mode: Large tensor blocks.2.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.2.attn.qkv.weight
+Processing parameter 33: blocks.2.attn.proj.weight
+TPU mode: Large tensor blocks.2.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.2.attn.proj.weight
+Processing parameter 37: blocks.2.mlp.fc1.weight
+TPU mode: Large tensor blocks.2.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.2.mlp.fc1.weight
+Processing parameter 39: blocks.2.mlp.fc2.weight
+TPU mode: Large tensor blocks.2.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.2.mlp.fc2.weight
+Processing parameter 40: blocks.2.mlp.fc2.bias
+Processing parameter 40: blocks.2.mlp.fc2.bias
+Parameter blocks.2.mlp.fc2.bias appended to params list (count: 40)
+Parameter name blocks.2.mlp.fc2.bias appended to names list (count: 40)
+Parameter blocks.2.mlp.fc2.bias added successfully (count: 40)
+Processing parameter 43: blocks.3.attn.qkv.weight
+TPU mode: Large tensor blocks.3.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.3.attn.qkv.weight
+Processing parameter 45: blocks.3.attn.proj.weight
+TPU mode: Large tensor blocks.3.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.3.attn.proj.weight
+Processing parameter 49: blocks.3.mlp.fc1.weight
+TPU mode: Large tensor blocks.3.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.3.mlp.fc1.weight
+Processing parameter 50: blocks.3.mlp.fc1.bias
+Processing parameter 50: blocks.3.mlp.fc1.bias
+Processing parameter 51: blocks.3.mlp.fc2.weight
+TPU mode: Large tensor blocks.3.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.3.mlp.fc2.weight
+Processing parameter 55: blocks.4.attn.qkv.weight
+TPU mode: Large tensor blocks.4.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.4.attn.qkv.weight
+Processing parameter 57: blocks.4.attn.proj.weight
+TPU mode: Large tensor blocks.4.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.4.attn.proj.weight
+Processing parameter 60: blocks.4.norm2.bias
+Processing parameter 60: blocks.4.norm2.bias
+Parameter blocks.4.norm2.bias appended to params list (count: 60)
+Parameter name blocks.4.norm2.bias appended to names list (count: 60)
+Parameter blocks.4.norm2.bias added successfully (count: 60)
+Processing parameter 61: blocks.4.mlp.fc1.weight
+TPU mode: Large tensor blocks.4.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.4.mlp.fc1.weight
+Processing parameter 63: blocks.4.mlp.fc2.weight
+TPU mode: Large tensor blocks.4.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.4.mlp.fc2.weight
+Processing parameter 67: blocks.5.attn.qkv.weight
+TPU mode: Large tensor blocks.5.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.5.attn.qkv.weight
+Processing parameter 69: blocks.5.attn.proj.weight
+TPU mode: Large tensor blocks.5.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.5.attn.proj.weight
+Processing parameter 70: blocks.5.attn.proj.bias
+Processing parameter 70: blocks.5.attn.proj.bias
+Processing parameter 73: blocks.5.mlp.fc1.weight
+TPU mode: Large tensor blocks.5.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.5.mlp.fc1.weight
+Processing parameter 75: blocks.5.mlp.fc2.weight
+TPU mode: Large tensor blocks.5.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.5.mlp.fc2.weight
+Processing parameter 79: blocks.6.attn.qkv.weight
+TPU mode: Large tensor blocks.6.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.6.attn.qkv.weight
+Processing parameter 80: blocks.6.attn.qkv.bias
+Processing parameter 80: blocks.6.attn.qkv.bias
+Parameter blocks.6.attn.qkv.bias appended to params list (count: 80)
+Parameter name blocks.6.attn.qkv.bias appended to names list (count: 80)
+Parameter blocks.6.attn.qkv.bias added successfully (count: 80)
+Processing parameter 81: blocks.6.attn.proj.weight
+TPU mode: Large tensor blocks.6.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.6.attn.proj.weight
+Processing parameter 85: blocks.6.mlp.fc1.weight
+TPU mode: Large tensor blocks.6.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.6.mlp.fc1.weight
+Processing parameter 87: blocks.6.mlp.fc2.weight
+TPU mode: Large tensor blocks.6.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.6.mlp.fc2.weight
+Processing parameter 90: blocks.7.norm1.bias
+Processing parameter 90: blocks.7.norm1.bias
+Processing parameter 91: blocks.7.attn.qkv.weight
+TPU mode: Large tensor blocks.7.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.7.attn.qkv.weight
+Processing parameter 93: blocks.7.attn.proj.weight
+TPU mode: Large tensor blocks.7.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.7.attn.proj.weight
+Processing parameter 97: blocks.7.mlp.fc1.weight
+TPU mode: Large tensor blocks.7.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.7.mlp.fc1.weight
+Processing parameter 99: blocks.7.mlp.fc2.weight
+TPU mode: Large tensor blocks.7.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.7.mlp.fc2.weight
+Processing parameter 100: blocks.7.mlp.fc2.bias
+Processing parameter 100: blocks.7.mlp.fc2.bias
+Parameter blocks.7.mlp.fc2.bias appended to params list (count: 100)
+Parameter name blocks.7.mlp.fc2.bias appended to names list (count: 100)
+Parameter blocks.7.mlp.fc2.bias added successfully (count: 100)
+Processing parameter 103: blocks.8.attn.qkv.weight
+TPU mode: Large tensor blocks.8.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.8.attn.qkv.weight
+Processing parameter 105: blocks.8.attn.proj.weight
+TPU mode: Large tensor blocks.8.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.8.attn.proj.weight
+Processing parameter 109: blocks.8.mlp.fc1.weight
+TPU mode: Large tensor blocks.8.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.8.mlp.fc1.weight
+Processing parameter 110: blocks.8.mlp.fc1.bias
+Processing parameter 110: blocks.8.mlp.fc1.bias
+Processing parameter 111: blocks.8.mlp.fc2.weight
+TPU mode: Large tensor blocks.8.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.8.mlp.fc2.weight
+Processing parameter 115: blocks.9.attn.qkv.weight
+TPU mode: Large tensor blocks.9.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.9.attn.qkv.weight
+Processing parameter 117: blocks.9.attn.proj.weight
+TPU mode: Large tensor blocks.9.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.9.attn.proj.weight
+Processing parameter 120: blocks.9.norm2.bias
+Processing parameter 120: blocks.9.norm2.bias
+Parameter blocks.9.norm2.bias appended to params list (count: 120)
+Parameter name blocks.9.norm2.bias appended to names list (count: 120)
+Parameter blocks.9.norm2.bias added successfully (count: 120)
+Processing parameter 121: blocks.9.mlp.fc1.weight
+TPU mode: Large tensor blocks.9.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.9.mlp.fc1.weight
+Processing parameter 123: blocks.9.mlp.fc2.weight
+TPU mode: Large tensor blocks.9.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.9.mlp.fc2.weight
+Processing parameter 127: blocks.10.attn.qkv.weight
+TPU mode: Large tensor blocks.10.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.10.attn.qkv.weight
+Processing parameter 129: blocks.10.attn.proj.weight
+TPU mode: Large tensor blocks.10.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.10.attn.proj.weight
+Processing parameter 130: blocks.10.attn.proj.bias
+Processing parameter 130: blocks.10.attn.proj.bias
+Processing parameter 133: blocks.10.mlp.fc1.weight
+TPU mode: Large tensor blocks.10.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.10.mlp.fc1.weight
+Processing parameter 135: blocks.10.mlp.fc2.weight
+TPU mode: Large tensor blocks.10.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.10.mlp.fc2.weight
+Processing parameter 139: blocks.11.attn.qkv.weight
+TPU mode: Large tensor blocks.11.attn.qkv.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.11.attn.qkv.weight
+Processing parameter 140: blocks.11.attn.qkv.bias
+Processing parameter 140: blocks.11.attn.qkv.bias
+Parameter blocks.11.attn.qkv.bias appended to params list (count: 140)
+Parameter name blocks.11.attn.qkv.bias appended to names list (count: 140)
+Parameter blocks.11.attn.qkv.bias added successfully (count: 140)
+Processing parameter 141: blocks.11.attn.proj.weight
+TPU mode: Large tensor blocks.11.attn.proj.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.11.attn.proj.weight
+Processing parameter 145: blocks.11.mlp.fc1.weight
+TPU mode: Large tensor blocks.11.mlp.fc1.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.11.mlp.fc1.weight
+Processing parameter 147: blocks.11.mlp.fc2.weight
+TPU mode: Large tensor blocks.11.mlp.fc2.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for blocks.11.mlp.fc2.weight
+Processing parameter 150: fc_norm.bias
+Processing parameter 150: fc_norm.bias
+Processing parameter 151: head.weight
+TPU mode: Large tensor head.weight, calling mark_step()...
+TPU mode: XLA mark_step() completed for head.weight
+Parameter iteration completed! Processed 152 parameters.
+TPU mode: Final XLA synchronization...
+TPU mode: Final mark_step() completed
+About to print param groups...
+TPU mode: Skipping detailed param group printing to avoid XLA issues
+Created 2 parameter groups
+  - no_decay: 102 parameters
+  - decay: 50 parameters
+About to return parameter groups...
+Parameter groups created successfully
+Optimizer created successfully
+Using device type: xla
+About to create loss scaler...
+Loss scaler created successfully
+About to create Cosine LR scheduler...
+Set warmup steps = 12500
+LR scheduler created successfully
+Set warmup steps = 0
+Max WD = 0.0500000, Min WD = 0.0500000
+criterion = SoftTargetCrossEntropy()
+Start training for 100 epochs
+Epoch: [0]  [  0/625]  eta: 10:40:46  loss: 7.0625 (7.0625)  lr: 0.0000 (0.0000)  time: 61.5148  data: 0.5293

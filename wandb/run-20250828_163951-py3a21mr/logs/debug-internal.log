@@ -1,0 +1,6 @@
+{"time":"2025-08-28T16:39:52.818713928Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-28T16:39:53.275253398Z","level":"INFO","msg":"stream: created new stream","id":"py3a21mr"}
+{"time":"2025-08-28T16:39:53.326089883Z","level":"INFO","msg":"stream: started","id":"py3a21mr"}
+{"time":"2025-08-28T16:39:53.326115054Z","level":"INFO","msg":"writer: started","stream_id":"py3a21mr"}
+{"time":"2025-08-28T16:39:53.326124914Z","level":"INFO","msg":"sender: started","stream_id":"py3a21mr"}
+{"time":"2025-08-28T16:39:53.326171563Z","level":"INFO","msg":"handler: started","stream_id":"py3a21mr"}

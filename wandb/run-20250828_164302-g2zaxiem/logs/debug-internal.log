@@ -1,0 +1,6 @@
+{"time":"2025-08-28T16:43:03.794810814Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
+{"time":"2025-08-28T16:43:04.284057212Z","level":"INFO","msg":"stream: created new stream","id":"g2zaxiem"}
+{"time":"2025-08-28T16:43:04.356259546Z","level":"INFO","msg":"handler: started","stream_id":"g2zaxiem"}
+{"time":"2025-08-28T16:43:04.356358856Z","level":"INFO","msg":"sender: started","stream_id":"g2zaxiem"}
+{"time":"2025-08-28T16:43:04.356357806Z","level":"INFO","msg":"writer: started","stream_id":"g2zaxiem"}
+{"time":"2025-08-28T16:43:04.356313126Z","level":"INFO","msg":"stream: started","id":"g2zaxiem"}

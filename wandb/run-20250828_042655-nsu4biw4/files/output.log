@@ -1,0 +1,107 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/nsu4biw4
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Using EMA with decay = 0.99990000
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 32
+Calculated total_batch_size = 2048
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 2048
+Update frequent = 1
+Number of training steps per epoch = 625
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: About to call xm.mark_step() before parameter iteration...
+TPU mode: xm.mark_step() completed
+About to iterate through named_parameters...
+Processing parameter 10: blocks.0.attn.proj.bias
+Processing parameter 20: blocks.1.attn.qkv.bias
+Processing parameter 30: blocks.2.norm1.bias
+Processing parameter 40: blocks.2.mlp.fc2.bias
+Processing parameter 50: blocks.3.mlp.fc1.bias
+Stopping parameter iteration after 50 params for debugging...
+Param groups = {
+  "no_decay": {
+    "weight_decay": 0.0,
+    "params": [
+      "cls_token",
+      "pos_embed",
+      "patch_embed.proj.bias",
+      "blocks.0.norm1.weight",
+      "blocks.0.norm1.bias",
+      "blocks.0.attn.qkv.bias",
+      "blocks.0.attn.proj.bias",
+      "blocks.0.norm2.weight",
+      "blocks.0.norm2.bias",
+      "blocks.0.mlp.fc1.bias",
+      "blocks.0.mlp.fc2.bias",
+      "blocks.1.norm1.weight",
+      "blocks.1.norm1.bias",
+      "blocks.1.attn.qkv.bias",
+      "blocks.1.attn.proj.bias",
+      "blocks.1.norm2.weight",
+      "blocks.1.norm2.bias",
+      "blocks.1.mlp.fc1.bias",
+      "blocks.1.mlp.fc2.bias",
+      "blocks.2.norm1.weight",
+      "blocks.2.norm1.bias",
+      "blocks.2.attn.qkv.bias",
+      "blocks.2.attn.proj.bias",
+      "blocks.2.norm2.weight",
+      "blocks.2.norm2.bias",
+      "blocks.2.mlp.fc1.bias",
+      "blocks.2.mlp.fc2.bias",
+      "blocks.3.norm1.weight",
+      "blocks.3.norm1.bias",
+      "blocks.3.attn.qkv.bias",
+      "blocks.3.attn.proj.bias",
+      "blocks.3.norm2.weight",
+      "blocks.3.norm2.bias",
+      "blocks.3.mlp.fc1.bias"
+    ],
+    "lr_scale": 1.0
+  },
+  "decay": {
+    "weight_decay": 0.05,
+    "params": [
+      "patch_embed.proj.weight",
+      "blocks.0.attn.qkv.weight",
+      "blocks.0.attn.proj.weight",
+      "blocks.0.mlp.fc1.weight",
+      "blocks.0.mlp.fc2.weight",
+      "blocks.1.attn.qkv.weight",
+      "blocks.1.attn.proj.weight",
+      "blocks.1.mlp.fc1.weight",
+      "blocks.1.mlp.fc2.weight",
+      "blocks.2.attn.qkv.weight",
+      "blocks.2.attn.proj.weight",
+      "blocks.2.mlp.fc1.weight",
+      "blocks.2.mlp.fc2.weight",
+      "blocks.3.attn.qkv.weight",
+      "blocks.3.attn.proj.weight",
+      "blocks.3.mlp.fc1.weight"
+    ],
+    "lr_scale": 1.0
+  }
+}
+Optimizer created successfully
+Using device type: xla
+About to create loss scaler...
+Loss scaler created successfully
+About to create Cosine LR scheduler...
+Set warmup steps = 12500
+LR scheduler created successfully
+Set warmup steps = 0
+Max WD = 0.0500000, Min WD = 0.0500000
+criterion = SoftTargetCrossEntropy()
+Start training for 100 epochs
+Epoch: [0]  [  0/625]  eta: 7:50:51  loss: 7.1250 (7.1250)  lr: 0.0000 (0.0000)  time: 45.2021  data: 3.4132
+Epoch: [0]  [ 10/625]  eta: 2:53:53  loss: 7.0938 (7.0795)  lr: 0.0000 (0.0000)  time: 16.9653  data: 6.1284
+Epoch: [0]  [ 20/625]  eta: 2:17:15  loss: 7.0625 (7.0625)  lr: 0.0000 (0.0000)  time: 12.0326  data: 7.8312
+Epoch: [0]  [ 30/625]  eta: 2:02:05  loss: 7.0625 (7.0685)  lr: 0.0000 (0.0000)  time: 9.7523  data: 9.1735
+Epoch: [0]  [ 40/625]  eta: 1:53:20  loss: 7.0625 (7.0602)  lr: 0.0000 (0.0000)  time: 9.5390  data: 8.2461
+Epoch: [0]  [ 50/625]  eta: 1:47:45  loss: 7.0312 (7.0619)  lr: 0.0000 (0.0000)  time: 9.5904  data: 7.5399

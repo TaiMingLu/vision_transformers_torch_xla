@@ -1,0 +1,127 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/3s4tyx9q
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 32
+Calculated total_batch_size = 2048
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 2048
+Update frequent = 1
+Number of training steps per epoch = 625
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: About to call xm.mark_step() before parameter iteration...
+TPU mode: xm.mark_step() completed
+TPU mode: Using name-only parameter grouping to avoid XLA compilation
+TPU mode: Collecting parameter names...
+TPU mode: Found 152 trainable parameters
+TPU mode: Grouping parameters by names...
+Processing parameter 1/152: cls_token
+Processing parameter 51/152: blocks.3.mlp.fc2.weight
+Processing parameter 101/152: blocks.8.norm1.weight
+Processing parameter 151/152: head.weight
+TPU mode: Parameter names grouped successfully
+TPU mode: Mapping names to tensors...
+TPU mode: All 152 parameters mapped successfully
+Parameter iteration completed! Processed 152 parameters.
+TPU mode: Final XLA synchronization...
+TPU mode: Final mark_step() completed
+About to print param groups...
+TPU mode: Skipping detailed param group printing to avoid XLA issues
+Created 2 parameter groups
+  - no_decay: 102 parameters
+  - decay: 50 parameters
+About to return parameter groups...
+Parameter groups created successfully
+Optimizer created successfully
+TPU mode: Skipping loss scaler (XLA handles mixed precision)
+TPU mode: About to set loss_scaler = None...
+TPU mode: Loss scaler set to None
+About to create Cosine LR scheduler...
+Set warmup steps = 12500
+LR scheduler created successfully
+Set warmup steps = 0
+Max WD = 0.0500000, Min WD = 0.0500000
+criterion = SoftTargetCrossEntropy()
+XLA compile warmup...
+[warmup skipped] torch_xla/csrc/helpers.cpp:588 : Check failed: dim1 == dim2 || dim1 == 1 || dim2 == 1 || dim1 == xla::Shape::kUnboundedSize || dim2 == xla::Shape::kUnboundedSize
+*** Begin stack trace ***
+	tsl::CurrentStackTrace()
+	torch_xla::XlaHelpers::GetPromotedShape(xla::Shape const&, xla::Shape const&)
+	torch_xla::XlaHelpers::PromoteShapes(xla::XlaOp, xla::XlaOp)
+	torch_xla::XlaHelpers::Promote(xla::XlaOp, xla::XlaOp)
+	torch_xla::BuildMul(xla::XlaOp, xla::XlaOp)
+	
+	torch_xla::InferOutputShape(absl::lts_20230802::Span<xla::Shape const>, std::function<xla::XlaOp (absl::lts_20230802::Span<xla::XlaOp const>)> const&)
+	
+	
+	torch_xla::XlaNode::GetOpShape(std::function<xla::Shape ()> const&) const
+	torch_xla::XlaNode::XlaNode(torch::lazy::OpKind, c10::ArrayRef<torch::lazy::Value>, std::function<xla::Shape ()> const&, unsigned long, torch::lazy::hash_t)
+	torch_xla::Generic::Generic(torch::lazy::OpKind, c10::ArrayRef<torch::lazy::Value>, std::function<xla::Shape ()> const&, std::function<absl::lts_20230802::InlinedVector<xla::XlaOp, 1ul, std::allocator<xla::XlaOp> > (torch_xla::XlaNode const&, torch_xla::LoweringContext*)>, unsigned long, torch::lazy::hash_t)
+	std::shared_ptr<torch::lazy::Node> torch_xla::MakeNode<torch_xla::Generic, torch::lazy::OpKind, c10::ArrayRef<torch::lazy::Value>&, std::function<xla::Shape ()> const&, std::function<absl::lts_20230802::InlinedVector<xla::XlaOp, 1ul, std::allocator<xla::XlaOp> > (torch_xla::XlaNode const&, torch_xla::LoweringContext*)>, unsigned long&, torch::lazy::hash_t&>(torch::lazy::OpKind&&, c10::ArrayRef<torch::lazy::Value>&, std::function<xla::Shape ()> const&, std::function<absl::lts_20230802::InlinedVector<xla::XlaOp, 1ul, std::allocator<xla::XlaOp> > (torch_xla::XlaNode const&, torch_xla::LoweringContext*)>&&, unsigned long&, torch::lazy::hash_t&)
+	torch_xla::Mul(torch::lazy::Value const&, torch::lazy::Value const&)
+	torch_xla::tensor_methods::mul(c10::intrusive_ptr<torch_xla::XLATensor, c10::detail::intrusive_target_default_null_type<torch_xla::XLATensor> > const&, c10::intrusive_ptr<torch_xla::XLATensor, c10::detail::intrusive_target_default_null_type<torch_xla::XLATensor> > const&, std::optional<c10::ScalarType>)
+	
+	torch_xla::XLANativeFunctions::mul(at::Tensor const&, at::Tensor const&)
+	
+	c10::Dispatcher::callBoxed(c10::OperatorHandle const&, std::vector<c10::IValue, std::allocator<c10::IValue> >*) const
+	
+	
+	at::_ops::mul_Tensor::redispatch(c10::DispatchKeySet, at::Tensor const&, at::Tensor const&)
+	
+	
+	at::_ops::mul_Tensor::call(at::Tensor const&, at::Tensor const&)
+	
+	
+	
+	
+	
+	
+	PyNumber_Multiply
+	_PyEval_EvalFrameDefault
+	
+	_PyEval_EvalFrameDefault
+	
+	_PyEval_EvalFrameDefault
+	_PyObject_FastCallDictTstate
+	_PyObject_Call_Prepend
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyObject_FastCallDictTstate
+	_PyObject_Call_Prepend
+	
+	PyObject_Call
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	
+	
+	
+	
+*** End stack trace ***
+
+Start training for 100 epochs

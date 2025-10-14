@@ -1,0 +1,20 @@
+W&B online run started. URL: https://wandb.ai/ttl/tpu-vit/runs/hpy7azvp
+Mixup is activated!
+WARNING:timm.models._builder:No pretrained configuration specified for my_vit_b model. Using a default. Please add a config to the model pretrained_cfg registry or pass explicitly.
+Forcing XLA synchronization after model.to(device)...
+XLA mark_step() after model.to(device) completed
+Using EMA with decay = 0.99990000
+Forcing XLA synchronization before parameter counting...
+XLA mark_step() completed
+TPU spawned process: world_size = 32
+Calculated total_batch_size = 2048
+Number of training examples = 1281167
+LR = 0.00400000
+Batch size = 2048
+Update frequent = 1
+Number of training steps per epoch = 625
+TPU multihost mode: XLA handles data distribution internally
+About to create optimizer...
+TPU mode: About to call xm.mark_step() before parameter iteration...
+TPU mode: xm.mark_step() completed
+About to iterate through named_parameters...
