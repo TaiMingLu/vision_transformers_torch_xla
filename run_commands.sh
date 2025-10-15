@@ -26,4 +26,4 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='cd ~/vision && git pull && cd ~'
+  --command='source ~/vision_env/bin/activate && cd ~/vision && python tools/test_tfds_loader.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --split train --num-samples 8 '
