@@ -41,7 +41,8 @@ fi
 echo "Launching training via multihost_runner_orig"
 echo "TPU prefix: ${TPU_PREFIX}"; echo "Zone: ${ZONE}"; echo "Project: ${PROJECT_ID}"
 echo "Data dir: ${DATA_DIR}"; echo "Output dir: ${OUTPUT_DIR}"
-echo "World size: ${WORLD_SIZE} | Global batch size: ${GLOBAL_BATCH_SIZE} (${PER_CORE_BATCH_SIZE} per core)"
+PER_CHIP_BATCH_SIZE=$(( PER_CORE_BATCH_SIZE * 2 ))
+echo "World size: ${WORLD_SIZE} | Global batch size: ${GLOBAL_BATCH_SIZE} (${PER_CORE_BATCH_SIZE} per core ≈ ${PER_CHIP_BATCH_SIZE} per chip)"
 
 REMOTE_COMMAND=$(cat <<EOF
 mkdir -p ${TPU_LOG_DIR}
