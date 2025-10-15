@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Iterable, Mapping
+from typing import Callable, Dict, Iterable, Mapping
 
 
 def _resolve_symbol(name: str, candidates: Iterable[str], install_hint: str) -> object:
@@ -161,23 +161,50 @@ _SYMBOL_SOURCES: Mapping[str, Iterable[str]] = {
         "timm.models.vision_transformer",
     ),
     "maybe_add_mask": (
-        "timm.layers",
+        "timm.layers.helpers",
         "timm.layers.attention",
         "timm.layers.attention_pool2d",
         "timm.layers.pos_embed",
-        "timm.layers.helpers",
-        "timm.models.layers",
+        "timm.models.layers.helpers",
         "timm.models.layers.attention",
-        "timm.models.vision_transformer",
+        "timm.models.layers.pos_embed",
     ),
 }
 
 
-__all__ = list(_SYMBOL_SOURCES.keys())
+def _fallback_maybe_add_mask() -> Callable:
+    import torch
 
-globals().update(
-    {
-        name: _resolve_symbol(name, modules, "'timm==0.9.16'")
-        for name, modules in _SYMBOL_SOURCES.items()
-    }
-)
+    def maybe_add_mask(attn, attn_mask=None):
+        if attn_mask is None:
+            return attn
+        if torch.is_tensor(attn_mask) and attn_mask.dtype == torch.bool:
+            return attn.masked_fill(~attn_mask, float('-inf'))
+        return attn + attn_mask
+
+    return maybe_add_mask
+
+
+_FALLBACK_FACTORIES: Dict[str, Callable[[], object]] = {
+    "maybe_add_mask": _fallback_maybe_add_mask,
+}
+
+
+def _load_symbols() -> Dict[str, object]:
+    namespace: Dict[str, object] = {}
+    for name, modules in _SYMBOL_SOURCES.items():
+        try:
+            namespace[name] = _resolve_symbol(name, modules, "'timm==0.9.16'")
+        except ImportError:
+            factory = _FALLBACK_FACTORIES.get(name)
+            if factory is None:
+                raise
+            namespace[name] = factory()
+    return namespace
+
+
+_EXPORTS = _load_symbols()
+
+__all__ = list(_EXPORTS.keys())
+
+globals().update(_EXPORTS)
