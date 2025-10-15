@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import os
+import re
 import sys
 from pathlib import Path
 from time import perf_counter
@@ -38,6 +39,26 @@ DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/usr/lib/x86_64-linux-gnu/libtpu.so",
     "/usr/local/lib/libtpu.so",
 )
+
+
+def _ensure_tfds_id(pipeline: str) -> str:
+    """Ensure the preprocessing pipeline keeps tfds_id."""
+
+    if "tfds_id" in pipeline:
+        return pipeline
+
+    def _inject(match: re.Match[str]) -> str:
+        contents = match.group(1)
+        if "tfds_id" in contents:
+            return match.group(0)
+        suffix = ", \"tfds_id\"" if contents.strip() else "\"tfds_id\""
+        return f"keep({contents}{suffix})"
+
+    updated, count = re.subn(r"keep\(([^)]*)\)", _inject, pipeline, count=1)
+    if count:
+        return updated
+
+    return pipeline + "|keep(\"image\", \"label\", \"tfds_id\")"
 
 
 def _libtpu_candidates() -> List[Path]:
@@ -198,6 +219,9 @@ def _build_args(data_dir: str,
                 shuffle_buffer: int,
                 world_size: int,
                 rank: int) -> argparse.Namespace:
+    train_pp = _ensure_tfds_id(train_pp)
+    eval_pp = _ensure_tfds_id(eval_pp)
+
     namespace = argparse.Namespace(
         data_set="imagenet2012",
         data_path=data_dir,
@@ -234,9 +258,9 @@ def parse_args() -> argparse.Namespace:
                         help="Samples drawn per loop on each worker")
     parser.add_argument("--num-loops", type=int, default=16,
                         help="Number of loops to execute per worker")
-    parser.add_argument("--train-pp", default="decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep(\"image\", \"label\")",
+    parser.add_argument("--train-pp", default="decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep(\"image\", \"label\", \"tfds_id\")",
                         help="big_vision preprocessing string for training")
-    parser.add_argument("--eval-pp", default="decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep(\"image\", \"label\")",
+    parser.add_argument("--eval-pp", default="decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep(\"image\", \"label\", \"tfds_id\")",
                         help="big_vision preprocessing string for evaluation")
     parser.add_argument("--seed", type=int, default=0, help="Base seed for TFDS shuffling")
     parser.add_argument("--prefetch", type=int, default=2, help="tf.data prefetch depth")
