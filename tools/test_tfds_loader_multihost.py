@@ -32,7 +32,6 @@ from typing import Dict, List
 
 import sysconfig
 import torch
-import torch.distributed as dist
 
 DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/lib/libtpu.so",
@@ -199,6 +198,18 @@ def _env_default(name: str, fallback: int) -> int:
         return fallback
 
 
+def _merge_rank_series(left: Dict[int, List[float]], right: Dict[int, List[float]]) -> Dict[int, List[float]]:
+    merged = dict(left)
+    merged.update(right)
+    return merged
+
+
+def _merge_id_hashes(left: Dict[int, List[int]], right: Dict[int, List[int]]) -> Dict[int, List[int]]:
+    merged = dict(left)
+    merged.update(right)
+    return merged
+
+
 def _build_args(data_dir: str,
                 train_pp: str,
                 eval_pp: str,
@@ -298,9 +309,6 @@ def main() -> None:
     if rank < 0 or rank >= max(world_size, 1):
         raise ValueError("rank must satisfy 0 <= rank < world_size")
 
-    if not dist.is_initialized():
-        dist.init_process_group("xla", init_method="pjrt://", rank=rank, world_size=world_size)
-
     is_train = cli_args.split == "train"
     shuffle_buffer = cli_args.shuffle_buffer if is_train else 0
 
@@ -370,29 +378,33 @@ def main() -> None:
 
     xm.rendezvous("collect_metrics")
 
-    device = xm.xla_device()
-    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
-    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64, device=device)
+    throughput_payload = {rank: list(local_throughputs)}
+    id_payload = {rank: list(local_id_hashes)}
 
-    gathered_loops = [torch.empty_like(loop_tensor) for _ in range(world_size)]
-    gathered_ids = [torch.empty_like(id_tensor) for _ in range(world_size)]
-
-    dist.all_gather(gathered_loops, loop_tensor)
-    dist.all_gather(gathered_ids, id_tensor)
-
-    gathered_loops_cpu = [tensor.cpu() for tensor in gathered_loops]
-    gathered_ids_cpu = [tensor.cpu() for tensor in gathered_ids]
+    per_rank_throughputs = xm.mesh_reduce("throughput_by_rank", throughput_payload, _merge_rank_series)
+    per_rank_ids = xm.mesh_reduce("tfds_id_hashes", id_payload, _merge_id_hashes)
 
     if xm.is_master_ordinal():
-        per_rank_throughputs: Dict[int, List[float]] = {
-            idx: gathered_loops_cpu[idx].tolist() for idx in range(world_size)
-        }
+        if not isinstance(per_rank_throughputs, dict):
+            raise RuntimeError("mesh_reduce returned unexpected payload for throughputs")
+        if not isinstance(per_rank_ids, dict):
+            raise RuntimeError("mesh_reduce returned unexpected payload for id hashes")
+
+        missing = [idx for idx in range(world_size) if idx not in per_rank_throughputs]
+        if missing:
+            raise RuntimeError(f"Missing throughput series for ranks: {missing}")
+
         global_loop_avg = [
             sum(per_rank_throughputs[idx][loop_idx] for idx in range(world_size)) / world_size
             for loop_idx in range(cli_args.num_loops)
         ]
 
-        flat_ids = torch.stack(gathered_ids_cpu).view(-1).tolist()
+        flat_ids: List[int] = []
+        for idx in range(world_size):
+            series = per_rank_ids.get(idx)
+            if series is None:
+                raise RuntimeError(f"Missing TFDS ids for rank {idx}")
+            flat_ids.extend(series)
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
