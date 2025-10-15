@@ -404,19 +404,65 @@ def main(args):
         # TPU spawned process: datasets were created in main_tpu()
         dataset_train = args._dataset_train
         dataset_val = args._dataset_val
+
+        def _dataset_summary(ds):
+            if ds is None:
+                return "None"
+            try:
+                length = len(ds)
+            except Exception:  # pragma: no cover - diagnostics only
+                length = "unknown"
+            return f"{type(ds).__name__}(len={length})"
+
+        print(
+            "TPU spawned process: received pre-built datasets -> "
+            f"train={_dataset_summary(dataset_train)}, "
+            f"val={_dataset_summary(dataset_val)}",
+            flush=True,
+        )
     elif args.tpu:
         # Main TPU process: just get nb_classes for validation, datasets created in spawned processes
+        print("TPU main process: fetching training dataset metadata...", flush=True)
+        metadata_start = time.time()
         _, args.nb_classes = build_dataset(is_train=True, args=args)
+        print(
+            "TPU main process: metadata fetch done in "
+            f"{time.time() - metadata_start:.2f}s",
+            flush=True,
+        )
         dataset_train = None  # Will be created in spawned process
         dataset_val = None    # Will be created in spawned process
     else:
         # Non-TPU mode: create datasets normally
+        print("CPU/GPU mode: building training dataset...", flush=True)
+        build_train_start = time.time()
         dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
+        try:
+            dataset_train_len = len(dataset_train)
+        except Exception:  # pragma: no cover - diagnostics only
+            dataset_train_len = "unknown"
+        print(
+            "CPU/GPU mode: training dataset ready in "
+            f"{time.time() - build_train_start:.2f}s (len={dataset_train_len})",
+            flush=True,
+        )
         if args.disable_eval:
             args.dist_eval = False
             dataset_val = None
+            print("CPU/GPU mode: evaluation disabled via flag", flush=True)
         else:
+            print("CPU/GPU mode: building eval dataset...", flush=True)
+            build_val_start = time.time()
             dataset_val, _ = build_dataset(is_train=False, args=args)
+            try:
+                dataset_val_len = len(dataset_val)
+            except Exception:  # pragma: no cover - diagnostics only
+                dataset_val_len = "unknown"
+            print(
+                "CPU/GPU mode: eval dataset ready in "
+                f"{time.time() - build_val_start:.2f}s (len={dataset_val_len})",
+                flush=True,
+            )
     
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
@@ -481,6 +527,7 @@ def main(args):
             num_workers_train = args.num_workers
             pin_memory_train = args.pin_mem
 
+        dataloader_train_start = time.time()
         data_loader_train = torch.utils.data.DataLoader(
             dataset_train, sampler=sampler_train,
             batch_size=args.batch_size,
@@ -488,8 +535,15 @@ def main(args):
             pin_memory=pin_memory_train,
             drop_last=True,
         )
+        print(
+            f"Training DataLoader constructed in "
+            f"{time.time() - dataloader_train_start:.2f}s "
+            f"(workers={num_workers_train}, pin_memory={pin_memory_train})",
+            flush=True,
+        )
     else:
         data_loader_train = None
+        print("Training dataset unavailable; skipping DataLoader construction", flush=True)
 
     if dataset_val is not None:
         if tpu_mode or is_bigvision_val:
@@ -503,6 +557,7 @@ def main(args):
             num_workers_val = args.num_workers
             pin_memory_val = args.pin_mem
 
+        dataloader_val_start = time.time()
         data_loader_val = torch.utils.data.DataLoader(
             dataset_val, sampler=sampler_val,
             batch_size=int(1.5 * args.batch_size),
@@ -510,8 +565,15 @@ def main(args):
             pin_memory=pin_memory_val,
             drop_last=False,
         )
+        print(
+            f"Validation DataLoader constructed in "
+            f"{time.time() - dataloader_val_start:.2f}s "
+            f"(workers={num_workers_val}, pin_memory={pin_memory_val})",
+            flush=True,
+        )
     else:
         data_loader_val = None
+        print("Validation dataset unavailable; skipping DataLoader construction", flush=True)
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -1068,19 +1130,44 @@ def main_tpu(args):
     # Set up TPU distributed mode
     utils.init_distributed_mode_xla(args)
     device = torch.device('xla')
-    
+    worker_rank = utils.get_rank()
+
     # fix the seed for reproducibility
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
-    
+
     # Create datasets in this process (avoiding pickle issues)
+    print(
+        f"TPU worker rank {worker_rank}: building training dataset...",
+        flush=True,
+    )
+    dataset_train_start = time.time()
     dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
+    print(
+        f"TPU worker rank {worker_rank}: training dataset ready in "
+        f"{time.time() - dataset_train_start:.2f}s",
+        flush=True,
+    )
     if args.disable_eval:
         args.dist_eval = False
         dataset_val = None
+        print(
+            f"TPU worker rank {worker_rank}: evaluation disabled via flag",
+            flush=True,
+        )
     else:
+        print(
+            f"TPU worker rank {worker_rank}: building eval dataset...",
+            flush=True,
+        )
+        dataset_val_start = time.time()
         dataset_val, _ = build_dataset(is_train=False, args=args)
+        print(
+            f"TPU worker rank {worker_rank}: eval dataset ready in "
+            f"{time.time() - dataset_val_start:.2f}s",
+            flush=True,
+        )
     
     # Continue with the rest of the main() function logic
     # but skip the distributed mode setup and dataset creation since we did it above
