@@ -22,6 +22,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --ssh-key-file="~/.ssh/id_rsa" \
   --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt'
 
+# Dat loader testing
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
@@ -31,8 +32,12 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && cd ~/vision &&  python -m torch_xla.distributed.xla_dist --tpu=$TPU_NAME -- python tools/test_tfds_loader.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds
-  --split train --num-samples 16 --time-it'
+  --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --split train --num-samples 8 --time-it'
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+  --project=${PROJECT_ID} --zone=${ZONE} \
+  --worker=all \
+  --ssh-key-file="~/.ssh/id_rsa" \
+  --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --samples-per-loop 128 --num-loops 32'
 
 
 

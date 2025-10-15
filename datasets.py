@@ -56,6 +56,7 @@ class BigVisionLoaderConfig:
     private_threadpool_size: int = 48
     normalize: str = "imagenet"
     skip_decode: bool = True
+    return_tfds_id: bool = False
 
 
 def _add_tpu_host_options(dataset: tf.data.Dataset,
@@ -156,7 +157,10 @@ class BigVisionImageNetDataset(IterableDataset):
             return image.sub_(self._mean).div_(self._std)
         return image
 
-    def __iter__(self) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+    def __iter__(self) -> Iterator[
+        tuple[torch.Tensor, torch.Tensor]
+        | tuple[torch.Tensor, torch.Tensor, str]
+    ]:
         self._epoch += 1
         epoch_seed = None
         if self._config.seed is not None:
@@ -166,6 +170,12 @@ class BigVisionImageNetDataset(IterableDataset):
         for example in ds.as_numpy_iterator():
             image = example['image']
             label = int(example['label'])
+            tfds_id = example.get('tfds_id')
+            if tfds_id is not None:
+                if isinstance(tfds_id, bytes):
+                    tfds_id = tfds_id.decode('utf-8')
+                else:
+                    tfds_id = str(tfds_id)
 
             if image.dtype != np.float32:
                 image = image.astype(np.float32)
@@ -173,8 +183,12 @@ class BigVisionImageNetDataset(IterableDataset):
             image = np.transpose(image, (2, 0, 1))
             torch_image = torch.from_numpy(image).contiguous()
             torch_image = self._maybe_normalize(torch_image)
+            label_tensor = torch.tensor(label, dtype=torch.long)
 
-            yield torch_image, torch.tensor(label, dtype=torch.long)
+            if self._config.return_tfds_id and tfds_id is not None:
+                yield torch_image, label_tensor, tfds_id
+            else:
+                yield torch_image, label_tensor
 
 
 def build_dataset(is_train: bool, args):
@@ -217,6 +231,7 @@ def build_dataset(is_train: bool, args):
         private_threadpool_size=getattr(args, 'tfds_private_threadpool_size', 48),
         normalize=getattr(args, 'big_vision_normalize', 'imagenet'),
         skip_decode=getattr(args, 'tfds_skip_decode', True),
+        return_tfds_id=getattr(args, 'tfds_return_id', False),
     )
 
     dataset = BigVisionImageNetDataset(config)

@@ -1,0 +1,285 @@
+"""Stress-test and validate the TFDS ImageNet loader in multi-host setups.
+
+This script iterates the Big Vision-based TFDS input pipeline for multiple
+loops per worker, checking two invariants:
+
+1. Sharding correctness — every TFDS example id observed across all ranks must
+   be unique.
+2. Throughput stability — per-rank and global throughput must not degrade beyond
+   the configured ratio or minimum samples/sec threshold across iterations.
+
+Run with PJRT/TPU via ``torchrun`` or ``xla_dist``. Example::
+
+    PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py \
+        --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
+        --split train --samples-per-loop 128 --num-loops 32 --log-every 4
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import os
+import sys
+from pathlib import Path
+from time import perf_counter
+from typing import Dict, List
+
+import torch
+
+try:
+    import torch_xla.core.xla_model as xm
+    import torch_xla.runtime as xr
+except ImportError as exc:  # pragma: no cover - TPU-only helper
+    raise ImportError(
+        "torch_xla must be installed to run the multihost TFDS loader test") from exc
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+DATASETS_PATH = REPO_ROOT / "datasets.py"
+if not DATASETS_PATH.exists():
+    raise FileNotFoundError(f"Could not find datasets.py at {DATASETS_PATH}")
+
+DATASETS_SPEC = importlib.util.spec_from_file_location("vision_datasets", DATASETS_PATH)
+assert DATASETS_SPEC and DATASETS_SPEC.loader, "Failed to build import spec for datasets.py"
+vision_datasets = importlib.util.module_from_spec(DATASETS_SPEC)
+sys.modules[DATASETS_SPEC.name] = vision_datasets
+DATASETS_SPEC.loader.exec_module(vision_datasets)
+build_dataset = vision_datasets.build_dataset
+
+
+def _env_default(name: str, fallback: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return fallback
+    try:
+        return int(value)
+    except ValueError:
+        return fallback
+
+
+def _merge_dicts(left: Dict[int, List[float]], right: Dict[int, List[float]]) -> Dict[int, List[float]]:
+    merged = dict(left)
+    for key, value in right.items():
+        existing = merged.get(key, [])
+        merged[key] = list(existing) + list(value)
+    return merged
+
+
+def _concat_lists(left: List[str], right: List[str]) -> List[str]:
+    return list(left) + list(right)
+
+
+def _build_args(data_dir: str,
+                train_pp: str,
+                eval_pp: str,
+                seed: int,
+                prefetch: int,
+                num_parallel_calls: int,
+                private_threadpool_size: int,
+                shuffle_buffer: int,
+                world_size: int,
+                rank: int) -> argparse.Namespace:
+    namespace = argparse.Namespace(
+        data_set="imagenet2012",
+        data_path=data_dir,
+        eval_data_path=data_dir,
+        tfds_data_dir=data_dir,
+        tfds_train_split="train",
+        tfds_eval_split="validation",
+        tfds_shuffle_buffer=shuffle_buffer,
+        tfds_cache_raw=False,
+        tfds_cache_eval=False,
+        tfds_prefetch=prefetch,
+        tfds_num_parallel_calls=num_parallel_calls,
+        tfds_private_threadpool_size=private_threadpool_size,
+        tfds_skip_decode=True,
+        big_vision_pp_train=train_pp,
+        big_vision_pp_eval=eval_pp,
+        big_vision_normalize="imagenet",
+        seed=seed,
+        world_size=world_size,
+        rank=rank,
+        tfds_return_id=True,
+    )
+    return namespace
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Multihost TFDS loader stress test")
+    parser.add_argument("--data-dir", required=True,
+                        help="Root directory containing TFDS ImageNet shards")
+    parser.add_argument("--split", default="train", choices=["train", "validation"],
+                        help="TFDS split to iterate")
+    parser.add_argument("--samples-per-loop", type=int, default=128,
+                        help="Samples drawn per loop on each worker")
+    parser.add_argument("--num-loops", type=int, default=16,
+                        help="Number of loops to execute per worker")
+    parser.add_argument("--train-pp", default="decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep(\"image\", \"label\")",
+                        help="big_vision preprocessing string for training")
+    parser.add_argument("--eval-pp", default="decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep(\"image\", \"label\")",
+                        help="big_vision preprocessing string for evaluation")
+    parser.add_argument("--seed", type=int, default=0, help="Base seed for TFDS shuffling")
+    parser.add_argument("--prefetch", type=int, default=2, help="tf.data prefetch depth")
+    parser.add_argument("--num-parallel-calls", type=int, default=100,
+                        help="tf.data parallel call count")
+    parser.add_argument("--private-threadpool-size", type=int, default=48,
+                        help="Private threadpool size for tf.data host workers")
+    parser.add_argument("--shuffle-buffer", type=int, default=250_000,
+                        help="Shuffle buffer when split=train (unused for eval)")
+    parser.add_argument("--world-size", type=int, default=None,
+                        help="Optional override for world size")
+    parser.add_argument("--rank", type=int, default=None,
+                        help="Optional override for rank")
+    parser.add_argument("--min-throughput-ratio", type=float, default=0.6,
+                        help="Minimum allowed ratio of min/max throughput per rank")
+    parser.add_argument("--min-samples-per-sec", type=float, default=0.5,
+                        help="Minimum per-rank throughput in samples/sec (set <=0 to disable)")
+    parser.add_argument("--log-every", type=int, default=4,
+                        help="How often (in loops) to log per-rank throughput")
+    return parser.parse_args()
+
+
+def main() -> None:
+    cli_args = parse_args()
+
+    if cli_args.world_size is not None:
+        world_size = cli_args.world_size
+    else:
+        try:
+            world_size = xr.world_size()
+        except RuntimeError:
+            world_size = _env_default("WORLD_SIZE", _env_default("NUM_PROCESSES", 1))
+
+    if cli_args.rank is not None:
+        rank = cli_args.rank
+    else:
+        try:
+            rank = xr.global_ordinal()
+        except RuntimeError:
+            rank = _env_default("RANK", _env_default("PROCESS_INDEX", 0))
+
+    if rank < 0 or rank >= max(world_size, 1):
+        raise ValueError("rank must satisfy 0 <= rank < world_size")
+
+    is_train = cli_args.split == "train"
+    shuffle_buffer = cli_args.shuffle_buffer if is_train else 0
+
+    args = _build_args(
+        data_dir=cli_args.data_dir,
+        train_pp=cli_args.train_pp,
+        eval_pp=cli_args.eval_pp,
+        seed=cli_args.seed,
+        prefetch=cli_args.prefetch,
+        num_parallel_calls=cli_args.num_parallel_calls,
+        private_threadpool_size=cli_args.private_threadpool_size,
+        shuffle_buffer=shuffle_buffer,
+        world_size=world_size,
+        rank=rank,
+    )
+
+    dataset, num_classes = build_dataset(is_train=is_train, args=args)
+    print(f"Dataset ready (split={cli_args.split}) rank={rank}/{world_size} num_classes={num_classes}", flush=True)
+
+    iterator = iter(dataset)
+    local_ids: List[str] = []
+    local_throughputs: List[float] = []
+    local_seen: set[str] = set()
+
+    total_samples_per_rank = cli_args.samples_per_loop * cli_args.num_loops
+
+    for loop_idx in range(cli_args.num_loops):
+        start = perf_counter()
+        loop_ids: List[str] = []
+        for _ in range(cli_args.samples_per_loop):
+            sample = next(iterator)
+            if len(sample) != 3:
+                raise RuntimeError(
+                    "Dataset did not return (image, label, tfds_id). Ensure tfds_return_id is enabled")
+            _image, _label, tfds_id = sample
+            if not isinstance(tfds_id, str):
+                raise TypeError(f"Expected tfds_id to be str, got {type(tfds_id)!r}")
+            loop_ids.append(tfds_id)
+        elapsed = perf_counter() - start
+        throughput = cli_args.samples_per_loop / max(elapsed, 1e-6)
+
+        loop_set = set(loop_ids)
+        if len(loop_set) != len(loop_ids):
+            raise RuntimeError(
+                f"Rank {rank} observed duplicate TFDS ids within loop {loop_idx}")
+        overlap = local_seen.intersection(loop_set)
+        if overlap:
+            dup_preview = ', '.join(sorted(list(overlap))[:3])
+            raise RuntimeError(
+                f"Rank {rank} observed repeated TFDS ids across loops: {dup_preview}")
+        local_seen.update(loop_set)
+
+        local_ids.extend(loop_ids)
+        local_throughputs.append(throughput)
+
+        if cli_args.log_every and ((loop_idx + 1) % cli_args.log_every == 0 or loop_idx == 0):
+            print(f"[rank {rank}] loop {loop_idx + 1}/{cli_args.num_loops}: "
+                  f"{throughput:.2f} samples/s ({elapsed:.2f}s)", flush=True)
+
+    if len(local_ids) != total_samples_per_rank:
+        raise RuntimeError(
+            f"Rank {rank} expected {total_samples_per_rank} samples, received {len(local_ids)}")
+
+    xm.rendezvous("collect_metrics")
+
+    device = xm.xla_device()
+    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
+    loop_sums = xm.all_reduce(xm.ReduceOp.SUM, loop_tensor)
+    global_loop_avg = [value / world_size for value in loop_sums.cpu().tolist()]
+
+    per_rank_throughputs = xm.mesh_reduce(
+        "throughput_by_rank", {rank: local_throughputs}, _merge_dicts)
+    all_tfds_ids = xm.mesh_reduce("tfds_ids", local_ids, _concat_lists)
+
+    if xm.is_master_ordinal():
+        expected_total = total_samples_per_rank * world_size
+        if len(all_tfds_ids) != expected_total:
+            raise RuntimeError(
+                f"Expected {expected_total} TFDS ids, gathered {len(all_tfds_ids)}")
+
+        unique_ids = set(all_tfds_ids)
+        duplicates = len(all_tfds_ids) - len(unique_ids)
+        if duplicates:
+            raise RuntimeError(
+                f"Detected {duplicates} duplicate TFDS ids across ranks; sharding is incorrect")
+
+        print("✅ TFDS id uniqueness check passed", flush=True)
+
+        for worker, series in sorted(per_rank_throughputs.items()):
+            worker_max = max(series)
+            worker_min = min(series)
+            ratio = worker_min / max(worker_max, 1e-6)
+            if ratio < cli_args.min_throughput_ratio:
+                raise RuntimeError(
+                    f"Rank {worker} throughput dropped below ratio threshold: {ratio:.2f} < "
+                    f"{cli_args.min_throughput_ratio}")
+            if cli_args.min_samples_per_sec > 0 and worker_min < cli_args.min_samples_per_sec:
+                raise RuntimeError(
+                    f"Rank {worker} min throughput {worker_min:.2f} < "
+                    f"required {cli_args.min_samples_per_sec}")
+            print(f"Rank {worker}: min {worker_min:.2f} / max {worker_max:.2f} samples/s "
+                  f"(ratio {ratio:.2f})", flush=True)
+
+        global_min = min(global_loop_avg)
+        global_max = max(global_loop_avg)
+        global_ratio = global_min / max(global_max, 1e-6)
+        if global_ratio < cli_args.min_throughput_ratio:
+            raise RuntimeError(
+                f"Global throughput degraded below ratio threshold: {global_ratio:.2f} < "
+                f"{cli_args.min_throughput_ratio}")
+
+        print(f"Global throughput per loop (avg samples/s across ranks): "
+              f"{', '.join(f'{v:.2f}' for v in global_loop_avg)}", flush=True)
+        print("✅ Throughput stability check passed", flush=True)
+        print("✅ Multihost TFDS loader stress test completed successfully", flush=True)
+
+
+if __name__ == "__main__":
+    main()
