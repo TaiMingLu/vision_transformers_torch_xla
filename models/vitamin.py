@@ -28,8 +28,15 @@ import torch
 import torch.nn as nn
 
 from timm.data import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
-from timm.layers import create_act_layer, get_norm_layer, get_norm_act_layer, create_conv2d, \
-    make_divisible, DropPath, HybridEmbed
+from timm.layers import (
+    create_act_layer,
+    get_norm_layer,
+    get_norm_act_layer,
+    create_conv2d,
+    make_divisible,
+    DropPath,
+)
+from ._compat import HybridEmbed
 from ._builder import build_model_with_cfg
 from ._manipulate import named_apply, checkpoint_seq
 from ._registry import register_model, generate_default_cfgs

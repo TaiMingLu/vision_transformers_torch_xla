@@ -20,7 +20,8 @@ import torch
 import torch.nn as nn
 
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from timm.layers import StdConv2dSame, StdConv2d, ConvNormAct, to_ntuple, HybridEmbed
+from timm.layers import StdConv2dSame, StdConv2d, ConvNormAct, to_ntuple
+from ._compat import HybridEmbed
 
 from ._builder import build_model_with_cfg
 from ._registry import generate_default_cfgs, register_model, register_model_deprecations
