@@ -374,8 +374,8 @@ def main() -> None:
     loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
     id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64, device=device)
 
-    gathered_throughputs = xm.all_gather(loop_tensor).cpu()
-    gathered_ids = xm.all_gather(id_tensor).cpu()
+    gathered_throughputs = xm.all_gather(loop_tensor, dim=0).cpu()
+    gathered_ids = xm.all_gather(id_tensor, dim=0).cpu()
 
     global_loop_avg = gathered_throughputs.mean(dim=0).tolist()
 
@@ -385,8 +385,7 @@ def main() -> None:
             for worker in range(world_size)
         }
 
-        hashes_per_loop = len(local_id_hashes) // cli_args.num_loops
-        per_rank_id_hashes = gathered_ids.view(world_size, hashes_per_loop).numpy().tolist()
+        per_rank_id_hashes = gathered_ids.numpy().tolist()
         flat_ids = [item for sublist in per_rank_id_hashes for item in sublist]
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
