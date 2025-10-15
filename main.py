@@ -490,6 +490,8 @@ def main(args):
     
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
+    args.world_size = num_tasks
+    args.rank = global_rank
     _log_event(
         "main",
         "rank=%s observed num_tasks=%s args.world_size=%s"
@@ -1183,6 +1185,8 @@ def main_tpu(args):
     utils.init_distributed_mode_xla(args)
     device = torch.device('xla')
     worker_rank = utils.get_rank()
+    args.rank = worker_rank
+    args.world_size = utils.get_world_size()
 
     # fix the seed for reproducibility
     seed = args.seed + utils.get_rank()
