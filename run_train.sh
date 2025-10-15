@@ -11,7 +11,7 @@ DATA_DIR="${DATA_DIR:-/home/terry/gcs-bucket/Distillation/imagenet_tfds}"
 OUTPUT_DIR="${OUTPUT_DIR:-/home/terry/gcs-bucket/Distillation/models/vanilla}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-b-vanilla}"
 TPU_LOG_DIR="${TPU_LOG_DIR:-/home/terry/tpu_logs}"
-WORLD_SIZE="${WORLD_SIZE:-64}"
+WORLD_SIZE="${WORLD_SIZE:-32}"
 GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-4096}"
 
 if (( GLOBAL_BATCH_SIZE % WORLD_SIZE != 0 )); then
@@ -56,6 +56,9 @@ python -u main.py \
     --epochs 300 \
     --drop_path 0.1 \
     --batch_size ${PER_CORE_BATCH_SIZE} \
+    --world_size \${WORLD_SIZE} \
+    --rank \$RANK \
+    --local_rank \$LOCAL_RANK \
     --update_freq 1 \
     --model_ema true \
     --model_ema_eval true \
