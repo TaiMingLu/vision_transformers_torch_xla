@@ -31,7 +31,6 @@ from time import perf_counter
 from typing import Dict, List
 
 import sysconfig
-import torch
 
 DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/lib/libtpu.so",
@@ -196,24 +195,6 @@ def _env_default(name: str, fallback: int) -> int:
         return int(value)
     except ValueError:
         return fallback
-
-
-def _concat_float_tensors(left, right):
-    def _to_tensor(value):
-        if isinstance(value, torch.Tensor):
-            return value.detach().cpu().float()
-        return torch.tensor(value, dtype=torch.float32)
-
-    return torch.cat((_to_tensor(left), _to_tensor(right)), dim=0)
-
-
-def _concat_long_tensors(left, right):
-    def _to_tensor(value):
-        if isinstance(value, torch.Tensor):
-            return value.detach().cpu().long()
-        return torch.tensor(value, dtype=torch.int64)
-
-    return torch.cat((_to_tensor(left), _to_tensor(right)), dim=0)
 
 
 def _build_args(data_dir: str,
@@ -384,41 +365,42 @@ def main() -> None:
 
     xm.rendezvous("collect_metrics")
 
-    throughput_payload = torch.tensor([rank, *local_throughputs], dtype=torch.float32)
-    id_payload = torch.empty(total_samples_per_rank + 1, dtype=torch.int64)
-    id_payload[0] = rank
-    id_payload[1:] = torch.tensor(local_id_hashes, dtype=torch.int64)
+    payload = [(rank, list(local_throughputs), list(local_id_hashes))]
 
-    all_throughputs = xm.mesh_reduce("throughput_series", throughput_payload, _concat_float_tensors)
-    all_id_hashes = xm.mesh_reduce("tfds_id_hashes", id_payload, _concat_long_tensors)
+    def _merge_payload(left, right):
+        return list(left) + list(right)
+
+    combined = xm.mesh_reduce("tfds_throughput_payload", payload, _merge_payload)
 
     if xm.is_master_ordinal():
-        per_rank_matrix = all_throughputs.view(-1, cli_args.num_loops + 1)
-        per_rank_throughputs: Dict[int, List[float]] = {
-            int(row[0].item()): row[1:].tolist() for row in per_rank_matrix
-        }
-        missing_throughputs = sorted(set(range(world_size)) - set(per_rank_throughputs))
-        if missing_throughputs:
-            raise RuntimeError(f"Missing throughput series for ranks: {missing_throughputs}")
+        if not isinstance(combined, list):
+            raise RuntimeError("Unexpected payload type from mesh_reduce")
+        combined.sort(key=lambda item: item[0])
+
+        per_rank_throughputs: Dict[int, List[float]] = {}
+        flat_ids: List[int] = []
+        for worker, series, hashes in combined:
+            if not isinstance(series, list):
+                series = list(series)
+            if not isinstance(hashes, list):
+                hashes = list(hashes)
+            if len(series) != cli_args.num_loops:
+                raise RuntimeError(
+                    f"Rank {worker} reported {len(series)} loop entries, expected {cli_args.num_loops}")
+            if len(hashes) != total_samples_per_rank:
+                raise RuntimeError(
+                    f"Rank {worker} reported {len(hashes)} TFDS ids, expected {total_samples_per_rank}")
+            per_rank_throughputs[worker] = series
+            flat_ids.extend(hashes)
+
+        missing_ranks = sorted(set(range(world_size)) - set(per_rank_throughputs))
+        if missing_ranks:
+            raise RuntimeError(f"Missing payloads from ranks: {missing_ranks}")
+
         global_loop_avg = [
             sum(per_rank_throughputs[idx][loop_idx] for idx in range(world_size)) / world_size
             for loop_idx in range(cli_args.num_loops)
         ]
-
-        id_matrix = all_id_hashes.view(-1, total_samples_per_rank + 1)
-        flat_ids: List[int] = []
-        seen_ranks = set()
-        for row in id_matrix:
-            worker = int(row[0].item())
-            series = row[1:].tolist()
-            if len(series) != total_samples_per_rank:
-                raise RuntimeError(
-                    f"Rank {worker} reported {len(series)} TFDS ids, expected {total_samples_per_rank}")
-            flat_ids.extend(series)
-            seen_ranks.add(worker)
-        missing_ids = sorted(set(range(world_size)) - seen_ranks)
-        if missing_ids:
-            raise RuntimeError(f"Missing TFDS ids for ranks: {missing_ids}")
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
