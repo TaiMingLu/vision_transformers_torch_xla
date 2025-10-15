@@ -21,6 +21,7 @@ training harness so no overrides are needed.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -29,12 +30,17 @@ from types import SimpleNamespace
 
 import torch
 
-# Ensure we import the local `datasets` module instead of Hugging Face's package.
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+DATASETS_PATH = REPO_ROOT / "datasets.py"
+if not DATASETS_PATH.exists():
+    raise FileNotFoundError(f"Could not find datasets.py at {DATASETS_PATH}")
 
-from datasets import build_dataset  # noqa: E402
+DATASETS_SPEC = importlib.util.spec_from_file_location("vision_datasets", DATASETS_PATH)
+assert DATASETS_SPEC and DATASETS_SPEC.loader, "Failed to build import spec for datasets.py"
+vision_datasets = importlib.util.module_from_spec(DATASETS_SPEC)
+sys.modules[DATASETS_SPEC.name] = vision_datasets
+DATASETS_SPEC.loader.exec_module(vision_datasets)
+build_dataset = vision_datasets.build_dataset
 
 
 def _env_default(name: str, fallback: int) -> int:
