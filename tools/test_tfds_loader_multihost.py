@@ -197,14 +197,6 @@ def _env_default(name: str, fallback: int) -> int:
         return fallback
 
 
-def _merge_dicts(left: Dict[int, List[float]], right: Dict[int, List[float]]) -> Dict[int, List[float]]:
-    merged = dict(left)
-    for key, value in right.items():
-        existing = merged.get(key, [])
-        merged[key] = list(existing) + list(value)
-    return merged
-
-
 def _concat_lists(left: List[str], right: List[str]) -> List[str]:
     return list(left) + list(right)
 
@@ -378,11 +370,17 @@ def main() -> None:
     loop_sums = xm.all_reduce("sum", loop_tensor)
     global_loop_avg = [value / world_size for value in loop_sums.cpu().tolist()]
 
-    per_rank_throughputs = xm.mesh_reduce(
-        "throughput_by_rank", {rank: local_throughputs}, _merge_dicts)
+    per_rank_series = xm.mesh_reduce(
+        "throughput_by_rank",
+        [(rank, local_throughputs)],
+        lambda left, right: left + right,
+    )
     all_tfds_ids = xm.mesh_reduce("tfds_ids", local_ids, _concat_lists)
 
     if xm.is_master_ordinal():
+        per_rank_throughputs: Dict[int, List[float]] = {
+            worker: series for worker, series in per_rank_series
+        }
         expected_total = total_samples_per_rank * world_size
         if len(all_tfds_ids) != expected_total:
             raise RuntimeError(
