@@ -1,5 +1,6 @@
 # New timm VisionTransformer-based models with drop_path support
 import copy
+from dataclasses import asdict, is_dataclass
 from timm.models.vision_transformer import (
     VisionTransformer,
     _create_vision_transformer,
@@ -16,16 +17,42 @@ _CFG_LOOKUP = {
     'my_vit_l': 'vit_large_patch16_224',
 }
 
+def _cfg_to_dict(cfg):
+    """Convert timm DefaultCfg / PretrainedCfg / dataclass to a plain dict."""
+    if cfg is None:
+        return None
+    if isinstance(cfg, dict):
+        return copy.deepcopy(cfg)
+    if hasattr(cfg, 'to_dict'):
+        try:
+            return cfg.to_dict()
+        except Exception:
+            pass
+    if hasattr(cfg, 'cfgs') and getattr(cfg, 'cfgs'):
+        tags = getattr(cfg, 'tags', ())
+        primary_tag = tags[0] if tags else next(iter(cfg.cfgs.keys()))
+        base = cfg.cfgs.get(primary_tag)
+        if base is None and cfg.cfgs:
+            base = next(iter(cfg.cfgs.values()))
+        if base is not None:
+            try:
+                return asdict(base)
+            except Exception:
+                pass
+    if is_dataclass(cfg):
+        try:
+            return asdict(cfg)
+        except Exception:
+            pass
+    # Fallback: shallow copy and rely on downstream defaults.
+    return copy.deepcopy(getattr(cfg, '__dict__', {}))
+
+
 for _model_name, _source_key in _CFG_LOOKUP.items():
     _src_cfg = default_cfgs.get(_model_name)
     if _src_cfg is None:
         _src_cfg = default_cfgs.get(_source_key)
-    if _src_cfg is None:
-        continue
-    if hasattr(_src_cfg, 'to_dict'):
-        default_cfgs[_model_name] = _src_cfg.to_dict()
-    else:
-        default_cfgs[_model_name] = copy.deepcopy(_src_cfg)
+    default_cfgs[_model_name] = _cfg_to_dict(_src_cfg)
 
 
 def _resolve_cfg(model_name: str):
