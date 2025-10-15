@@ -20,7 +20,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt'
+  --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt && python -m pip install libtpu-nightly==0.1.dev20240521 --extra-index-url https://storage.googleapis.com/libtpu-releases/index.html'
 
 # Dat loader testing
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
@@ -33,12 +33,18 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
   --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --split train --num-samples 8 --time-it'
-gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
-  --project=${PROJECT_ID} --zone=${ZONE} \
-  --worker=all \
-  --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU PJRT_TPU_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu/libtpu.so  torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --samples-per-loop 128 --num-loops 32'
 
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+    --project=${PROJECT_ID} --zone=${ZONE} --worker=all \
+    --ssh-key-file="~/.ssh/id_rsa" \
+    --command=$'source ~/vision_env/bin/activate && \
+               cd ~/vision && \
+               PJRT_DEVICE=TPU \
+               PJRT_TPU_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu/libtpu.so \
+               LD_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu:${LD_LIBRARY_PATH:-} \
+               torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py \
+                 --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
+                 --samples-per-loop 128 --num-loops 32'
 
 
 
@@ -52,7 +58,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && pip install libtpu-nightly'
+  --command='source ~/vision_env/bin/activate && python3 -m pip install libtpu-nightly==0.1.dev20240521 --extra-index-url https://storage.googleapis.com/libtpu-releases/index.html'
 
 
 

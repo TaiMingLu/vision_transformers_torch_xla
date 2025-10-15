@@ -1,11 +1,19 @@
-torch==2.3.0
-torchvision==0.18.0
-torchaudio==2.3.0
-torch-xla==2.3.0
+# === Core: TPU + PyTorch/XLA (Python 3.10) ===
+# Torch/XLA 2.7 is the right line for py310 on TPU.
+torch==2.7.1
+torchvision==0.22.1
+torchaudio==2.7.1
+torch-xla[tpu]==2.7.0
+
+# === Common libs ===
 numpy==1.26.4
-timm==0.9.16
+timm==1.0.20
 wandb==0.16.6
 tensorboard==2.15.1
-tensorflow==2.15.1
+
+# === Datasets (pick what you actually use) ===
 datasets==4.2.0
+
+# If you need TF/TFDS just for data loading, prefer TF CPU to avoid conflicts with torch-xla.
+tensorflow-cpu==2.15.1
 tensorflow-datasets==4.9.3
