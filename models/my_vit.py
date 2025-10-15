@@ -18,14 +18,28 @@ _CFG_LOOKUP = {
 
 for _model_name, _source_key in _CFG_LOOKUP.items():
     if _model_name not in default_cfgs and _source_key in default_cfgs:
-        default_cfgs[_model_name] = copy.deepcopy(default_cfgs[_source_key])
+        _src_cfg = default_cfgs[_source_key]
+        if hasattr(_src_cfg, 'to_dict'):
+            default_cfgs[_model_name] = _src_cfg.to_dict()
+        else:
+            default_cfgs[_model_name] = copy.deepcopy(_src_cfg)
+
+
+def _resolve_cfg(model_name: str):
+    cfg = default_cfgs.get(model_name)
+    if cfg is None:
+        cfg_key = _CFG_LOOKUP.get(model_name)
+        if cfg_key is not None:
+            cfg = default_cfgs.get(cfg_key)
+    if cfg is None:
+        return None
+    if hasattr(cfg, 'to_dict'):
+        cfg = cfg.to_dict()
+    return cfg
 
 
 def _apply_default_cfg(model: VisionTransformer, model_name: str) -> VisionTransformer:
-    cfg_key = _CFG_LOOKUP.get(model_name)
-    if not cfg_key:
-        return model
-    cfg = default_cfgs.get(cfg_key)
+    cfg = _resolve_cfg(model_name)
     if not cfg:
         return model
     cfg_copy = copy.deepcopy(cfg)
