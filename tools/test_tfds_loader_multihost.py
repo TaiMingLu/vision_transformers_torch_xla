@@ -27,6 +27,31 @@ from typing import Dict, List
 
 import torch
 
+DEFAULT_TPU_LIBRARY_CANDIDATES = (
+    "/lib/libtpu.so",
+    "/usr/lib/libtpu.so",
+    "/usr/local/lib/libtpu.so",
+)
+
+
+def _maybe_configure_pjrt_library() -> None:
+    """Populate PJRT_TPU_LIBRARY_PATH when running against TPU PJRT."""
+
+    if os.environ.get("PJRT_DEVICE", "").upper() != "TPU":
+        return
+    if os.environ.get("PJRT_TPU_LIBRARY_PATH"):
+        return
+    for candidate in DEFAULT_TPU_LIBRARY_CANDIDATES:
+        if Path(candidate).is_file():
+            os.environ["PJRT_TPU_LIBRARY_PATH"] = candidate
+            break
+
+
+_maybe_configure_pjrt_library()
+
+DEFAULT_TFDS_DIR = os.environ.get(
+    "VISION_TFDS_DIR", "/home/terry/gcs-bucket/Distillation/imagenet_tfds")
+
 try:
     import torch_xla.core.xla_model as xm
     import torch_xla.runtime as xr
@@ -109,8 +134,9 @@ def _build_args(data_dir: str,
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Multihost TFDS loader stress test")
-    parser.add_argument("--data-dir", required=True,
-                        help="Root directory containing TFDS ImageNet shards")
+    parser.add_argument("--data-dir", default=DEFAULT_TFDS_DIR,
+                        help=("Root directory containing TFDS ImageNet shards."
+                              " Defaults to $VISION_TFDS_DIR or /home/terry/gcs-bucket/Distillation/imagenet_tfds."))
     parser.add_argument("--split", default="train", choices=["train", "validation"],
                         help="TFDS split to iterate")
     parser.add_argument("--samples-per-loop", type=int, default=128,
@@ -144,6 +170,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     cli_args = parse_args()
+
+    if not cli_args.data_dir:
+        raise SystemExit("error: specify --data-dir or set VISION_TFDS_DIR to point at the TFDS root")
 
     if cli_args.world_size is not None:
         world_size = cli_args.world_size

@@ -53,4 +53,3 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
   --command='source ~/vision_env/bin/activate && python -m pip install datasets'
-

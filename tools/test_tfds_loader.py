@@ -30,6 +30,9 @@ from types import SimpleNamespace
 
 import torch
 
+DEFAULT_TFDS_DIR = os.environ.get(
+    "VISION_TFDS_DIR", "/home/terry/gcs-bucket/Distillation/imagenet_tfds")
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -93,8 +96,9 @@ def _build_args(data_dir: str,
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate the TFDS ImageNet loader")
-    parser.add_argument("--data-dir", required=True,
-                        help="Root directory containing TFDS ImageNet shards (e.g. imagenet2012/5.1.0)")
+    parser.add_argument("--data-dir", default=DEFAULT_TFDS_DIR,
+                        help=("Root directory containing TFDS ImageNet shards (e.g. imagenet2012/5.1.0)."
+                              " Defaults to $VISION_TFDS_DIR or /home/terry/gcs-bucket/Distillation/imagenet_tfds."))
     parser.add_argument("--split", default="train", choices=["train", "validation"],
                         help="TFDS split to iterate")
     parser.add_argument("--num-samples", type=int, default=8,
@@ -122,6 +126,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     cli_args = parse_args()
+
+    if not cli_args.data_dir:
+        raise SystemExit("error: specify --data-dir or set VISION_TFDS_DIR to point at the TFDS root")
 
     world_size = cli_args.world_size
     rank = cli_args.rank
