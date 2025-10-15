@@ -27,7 +27,7 @@ import re
 import sys
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import sysconfig
 import torch
@@ -198,6 +198,11 @@ def _env_default(name: str, fallback: int) -> int:
 
 
 def _concat_lists(left: List[str], right: List[str]) -> List[str]:
+    return list(left) + list(right)
+
+
+def _merge_rank_series(left: List[Tuple[int, List[float]]],
+                       right: List[Tuple[int, List[float]]]) -> List[Tuple[int, List[float]]]:
     return list(left) + list(right)
 
 
@@ -373,7 +378,7 @@ def main() -> None:
     per_rank_series = xm.mesh_reduce(
         "throughput_by_rank",
         [(rank, local_throughputs)],
-        lambda left, right: left + right,
+        _merge_rank_series,
     )
     all_tfds_ids = xm.mesh_reduce("tfds_ids", local_ids, _concat_lists)
 
