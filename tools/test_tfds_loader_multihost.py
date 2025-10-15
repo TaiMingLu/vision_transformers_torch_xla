@@ -385,8 +385,9 @@ def main() -> None:
             for worker in range(world_size)
         }
 
-        all_tfds_ids = gathered_ids.view(world_size, -1).numpy().tolist()
-        flat_ids = [item for sublist in all_tfds_ids for item in sublist]
+        hashes_per_loop = len(local_id_hashes) // cli_args.num_loops
+        per_rank_id_hashes = gathered_ids.view(world_size, hashes_per_loop).numpy().tolist()
+        flat_ids = [item for sublist in per_rank_id_hashes for item in sublist]
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
