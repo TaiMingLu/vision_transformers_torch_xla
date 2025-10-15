@@ -53,6 +53,17 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
      bash run.sh"
 
 
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+  --project=${PROJECT_ID} --zone=${ZONE} --worker=0 \
+  --ssh-key-file="~/.ssh/id_rsa" \
+  --command="
+  export TPU_PREFIX=taiming-v4-64
+  source ~/vision_env/bin/activate
+    cd ~/vision
+    bash run_train.sh"
+
+
+
 
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
@@ -94,7 +105,6 @@ PJRT_DEVICE=TPU torchrun --nproc_per_node=8 main.py \
     --model my_vit_b \
     --epochs 300 \
     --drop_path 0.1 \
-    --batch_size 512 \
     --update_freq 1 \
     --model_ema true \
     --model_ema_eval true \
