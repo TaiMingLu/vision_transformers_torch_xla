@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Un
 from torch import nn as nn
 from torch.hub import load_state_dict_from_url
 
-from timm.models._features import FeatureListNet, FeatureDictNet, FeatureHookNet, FeatureGetterNet
+from timm.models import _features as _timm_features
 from timm.models._features_fx import FeatureGraphNet
 from timm.models._helpers import load_state_dict
 from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file, load_state_dict_from_hf, \
@@ -17,6 +17,21 @@ from timm.models._manipulate import adapt_input_conv
 from timm.models._pretrained import PretrainedCfg
 from timm.models._prune import adapt_model_from_file
 from timm.models._registry import get_pretrained_cfg
+
+FeatureListNet = getattr(_timm_features, 'FeatureListNet')
+FeatureDictNet = getattr(_timm_features, 'FeatureDictNet')
+FeatureHookNet = getattr(_timm_features, 'FeatureHookNet')
+FeatureGetterNet = getattr(_timm_features, 'FeatureGetterNet', None)
+
+if FeatureGetterNet is None:
+    class FeatureGetterNet(FeatureHookNet):  # type: ignore[misc]
+        """Fallback when timm lacks FeatureGetterNet (older releases)."""
+
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "FeatureGetterNet is unavailable in this timm version. "
+                "Upgrade timm or avoid feature_cls='getter'.")
+
 
 _logger = logging.getLogger(__name__)
 

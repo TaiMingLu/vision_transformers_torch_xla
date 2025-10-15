@@ -58,6 +58,9 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --ssh-key-file="~/.ssh/id_rsa" \
   --command="
   export TPU_PREFIX=taiming-v4-64
+  export ZONE=us-central2-b
+  export PROJECT_ID=vision-mix
+  export GLOBAL_BATCH_SIZE=4096
   source ~/vision_env/bin/activate
     cd ~/vision
     bash run_train.sh"
