@@ -37,7 +37,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --samples-per-loop 128 --num-loops 32'
+  --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU PJRT_TPU_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu/libtpu.so  torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --samples-per-loop 128 --num-loops 32'
 
 
 
@@ -52,4 +52,38 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && python -m pip install datasets'
+  --command='source ~/vision_env/bin/activate && pip install libtpu-nightly'
+
+
+
+
+
+
+
+
+
+gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
+  --zone="$ZONE" --project="$PROJECT_ID" --worker=all \
+  --command '
+#!/bin/bash
+cd /home/terry/vision
+
+# Set essential TPU environment variables
+export USE_TPU=1
+export XLA_USE_BF16=1
+export PJRT_DEVICE=TPU
+
+PJRT_DEVICE=TPU torchrun --nproc_per_node=8 main.py \
+    --tpu \
+    --model my_vit_b \
+    --epochs 300 \
+    --drop_path 0.1 \
+    --batch_size 512 \
+    --update_freq 1 \
+    --model_ema true \
+    --model_ema_eval true \
+    --data_set IMNET \
+    --data_path /home/terry/gcs-bucket/Distillation/imagenet_tfds \
+    --output_dir /home/terry/gcs-bucket/Distillation/models/vanilla \
+    --experiment b-vanilla
+' 2>&1 | tee /home/tl0463/storage/scratch_zhuangl/tl0463/language/logstrain_tpu_v4_64.log

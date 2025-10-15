@@ -35,6 +35,6 @@ PJRT_DEVICE=TPU torchrun --nproc_per_node=8 main.py \
     --data_path /home/terry/gcs-bucket/Distillation/imagenet_tfds \
     --output_dir /home/terry/gcs-bucket/Distillation/models/vanilla \
     --experiment b-vanilla
-' 2>&1 | tee ~/train_tpu_v4_64.log
+' 2>&1 | tee /home/tl0463/storage/scratch_zhuangl/tl0463/language/logstrain_tpu_v4_64.log
 
 echo "Training completed. Check ~/train_tpu_v4_64.log for details."
