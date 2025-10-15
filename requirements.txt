@@ -7,4 +7,5 @@ timm==0.9.16
 wandb==0.16.6
 tensorboard==2.15.1
 tensorflow==2.15.1
+datasets==4.2.0
 tensorflow-datasets==4.9.3
