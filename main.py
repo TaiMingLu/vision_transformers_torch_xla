@@ -384,6 +384,11 @@ def main(args):
         print("TPU spawned process: Initializing XLA distributed mode...")
         utils.init_distributed_mode_xla(args)  # Only spawned processes join the distributed group
         device = args._xla_device
+        _log_event(
+            "main",
+            "rank=%s distributed initialized (args.world_size=%s)"
+            % (utils.get_rank(), getattr(args, 'world_size', '?')),
+        )
     else:
         # Non-TPU path: GPU/CPU
         utils.init_distributed_mode(args)      # original GPU/CPU path
@@ -485,6 +490,11 @@ def main(args):
     
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
+    _log_event(
+        "main",
+        "rank=%s observed num_tasks=%s args.world_size=%s"
+        % (global_rank, num_tasks, getattr(args, 'world_size', '?')),
+    )
     _log_event(
         "main",
         "rank=%s dataset setup complete train=%s val=%s"
