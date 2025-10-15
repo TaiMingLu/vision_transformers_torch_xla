@@ -21,6 +21,7 @@ training harness so no overrides are needed.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from time import perf_counter
@@ -34,6 +35,16 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from datasets import build_dataset  # noqa: E402
+
+
+def _env_default(name: str, fallback: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return fallback
+    try:
+        return int(value)
+    except ValueError:
+        return fallback
 
 
 def _build_args(data_dir: str,
@@ -91,9 +102,9 @@ def parse_args() -> argparse.Namespace:
                         help="Threadpool size for tf.data host workers")
     parser.add_argument("--shuffle-buffer", type=int, default=250_000,
                         help="Shuffle buffer size used when split=train (set 0 for eval)")
-    parser.add_argument("--world-size", type=int, default=1,
+    parser.add_argument("--world-size", type=int, default=None,
                         help="Total number of processes participating in the data pipeline")
-    parser.add_argument("--rank", type=int, default=0,
+    parser.add_argument("--rank", type=int, default=None,
                         help="This process's rank (0-indexed)")
     parser.add_argument("--time-it", action="store_true",
                         help="Print rough throughput timing for the requested samples")
@@ -103,7 +114,15 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     cli_args = parse_args()
 
-    if cli_args.rank < 0 or cli_args.rank >= cli_args.world_size:
+    world_size = cli_args.world_size
+    rank = cli_args.rank
+
+    if world_size is None:
+        world_size = _env_default("WORLD_SIZE", _env_default("NUM_PROCESSES", 1))
+    if rank is None:
+        rank = _env_default("RANK", _env_default("PROCESS_INDEX", 0))
+
+    if rank < 0 or rank >= max(world_size, 1):
         raise ValueError("rank must satisfy 0 <= rank < world_size")
 
     args = _build_args(
@@ -115,13 +134,13 @@ def main() -> None:
         num_parallel_calls=cli_args.num_parallel_calls,
         private_threadpool_size=cli_args.private_threadpool_size,
         shuffle_buffer=cli_args.shuffle_buffer if cli_args.split == "train" else 0,
-        world_size=cli_args.world_size,
-        rank=cli_args.rank,
+        world_size=world_size,
+        rank=rank,
     )
 
     is_train = cli_args.split == "train"
     dataset, num_classes = build_dataset(is_train=is_train, args=args)
-    print(f"Dataset built (split={cli_args.split}) rank={cli_args.rank}/{cli_args.world_size}. "
+    print(f"Dataset built (split={cli_args.split}) rank={rank}/{world_size}. "
           f"num_classes={num_classes}")
 
     iterator = iter(dataset)
