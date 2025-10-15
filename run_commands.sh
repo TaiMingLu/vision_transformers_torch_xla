@@ -57,6 +57,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} --worker=0 \
   --ssh-key-file="~/.ssh/id_rsa" \
   --command="
+  rm -rf /home/terry/tpu_logs
   cd ~/vision
   git pull
   export TPU_PREFIX=taiming-v4-64
