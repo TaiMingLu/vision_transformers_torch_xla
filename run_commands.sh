@@ -25,7 +25,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='python - <<'PY'
+  --command='source ~/vision_env/bin/activate && python - <<'PY'
 import torch_xla.core.xla_model as xm
 print(xm.get_xla_supported_devices())
 PY
@@ -49,8 +49,6 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
     --command=$'source ~/vision_env/bin/activate && \
                cd ~/vision && \
                PJRT_DEVICE=TPU \
-               PJRT_TPU_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu/libtpu.so \
-               LD_LIBRARY_PATH=/home/terry/vision_env/lib/python3.10/site-packages/libtpu:${LD_LIBRARY_PATH:-} \
                torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py \
                  --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
                  --samples-per-loop 128 --num-loops 32'
@@ -77,10 +75,14 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
 
 
 
-gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
-  --zone="$ZONE" --project="$PROJECT_ID" --worker=all \
-  --command '
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+    --project=${PROJECT_ID} --zone=${ZONE} --worker=all \
+    --ssh-key-file="~/.ssh/id_rsa" \
+    --command=$'
 #!/bin/bash
+
+source ~/vision_env/bin/activate
+
 cd /home/terry/vision
 
 # Set essential TPU environment variables

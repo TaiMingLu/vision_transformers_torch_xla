@@ -30,6 +30,7 @@ import torch
 
 DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/lib/libtpu.so",
+    "/lib/x86_64-linux-gnu/libtpu.so",
     "/usr/lib/libtpu.so",
     "/usr/lib/x86_64-linux-gnu/libtpu.so",
     "/usr/local/lib/libtpu.so",
@@ -109,13 +110,29 @@ def _maybe_configure_pjrt_library() -> None:
     if os.environ.get("PJRT_TPU_LIBRARY_PATH"):
         return
 
+    import ctypes
+
     for candidate in _libtpu_candidates():
-        if candidate and candidate.is_file():
-            os.environ["PJRT_TPU_LIBRARY_PATH"] = str(candidate)
-            print(f"Auto-configured PJRT_TPU_LIBRARY_PATH={candidate}", flush=True)
-            break
-    else:
-        print("warning: failed to locate libtpu.so automatically; set PJRT_TPU_LIBRARY_PATH manually", flush=True)
+        if not candidate:
+            continue
+        path = candidate
+        if path.is_dir():
+            path = path / "libtpu.so"
+        if not path.is_file():
+            continue
+        try:
+            ctypes.CDLL(str(path))
+        except OSError as exc:
+            print(f"warning: skipping {path} (failed to load libtpu.so: {exc})", flush=True)
+            continue
+        os.environ["PJRT_TPU_LIBRARY_PATH"] = str(path)
+        print(f"Auto-configured PJRT_TPU_LIBRARY_PATH={path}", flush=True)
+        return
+
+    raise SystemExit(
+        "error: could not locate a usable libtpu.so. Set PJRT_TPU_LIBRARY_PATH to the "
+        "full path of libtpu.so on the TPU VM (for example /lib/x86_64-linux-gnu/libtpu.so)."
+    )
 
 
 _maybe_configure_pjrt_library()
