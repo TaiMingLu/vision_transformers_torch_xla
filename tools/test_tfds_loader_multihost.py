@@ -32,6 +32,7 @@ from typing import Dict, List
 
 import sysconfig
 import torch
+import torch.distributed as dist
 
 DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/lib/libtpu.so",
@@ -198,22 +199,6 @@ def _env_default(name: str, fallback: int) -> int:
         return fallback
 
 
-def _concat_lists(left: List[str], right: List[str]) -> List[str]:
-    return list(left) + list(right)
-
-
-def _concat_rank_series(left, right):
-    return list(left) + list(right)
-
-
-def _concat_tensors(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
-    if left.numel() == 0:
-        return right
-    if right.numel() == 0:
-        return left
-    return torch.cat((left, right), dim=0)
-
-
 def _build_args(data_dir: str,
                 train_pp: str,
                 eval_pp: str,
@@ -313,6 +298,9 @@ def main() -> None:
     if rank < 0 or rank >= max(world_size, 1):
         raise ValueError("rank must satisfy 0 <= rank < world_size")
 
+    if not dist.is_initialized():
+        dist.init_process_group("xla", init_method="pjrt://", rank=rank, world_size=world_size)
+
     is_train = cli_args.split == "train"
     shuffle_buffer = cli_args.shuffle_buffer if is_train else 0
 
@@ -383,26 +371,28 @@ def main() -> None:
     xm.rendezvous("collect_metrics")
 
     device = xm.xla_device()
-    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32)
-    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64)
+    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
+    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64, device=device)
 
-    per_rank_series = xm.mesh_reduce(
-        "throughput_by_rank",
-        [(rank, local_throughputs)],
-        _concat_rank_series,
-    )
-    all_id_hashes = xm.mesh_reduce("tfds_id_hashes", id_tensor, _concat_tensors)
+    gathered_loops = [torch.empty_like(loop_tensor) for _ in range(world_size)]
+    gathered_ids = [torch.empty_like(id_tensor) for _ in range(world_size)]
+
+    dist.all_gather(gathered_loops, loop_tensor)
+    dist.all_gather(gathered_ids, id_tensor)
+
+    gathered_loops_cpu = [tensor.cpu() for tensor in gathered_loops]
+    gathered_ids_cpu = [tensor.cpu() for tensor in gathered_ids]
 
     if xm.is_master_ordinal():
         per_rank_throughputs: Dict[int, List[float]] = {
-            worker: series for worker, series in per_rank_series
+            idx: gathered_loops_cpu[idx].tolist() for idx in range(world_size)
         }
         global_loop_avg = [
-            sum(series[idx] for series in per_rank_throughputs.values()) / world_size
-            for idx in range(cli_args.num_loops)
+            sum(per_rank_throughputs[idx][loop_idx] for idx in range(world_size)) / world_size
+            for loop_idx in range(cli_args.num_loops)
         ]
 
-        flat_ids = all_id_hashes.numpy().tolist()
+        flat_ids = torch.stack(gathered_ids_cpu).view(-1).tolist()
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
