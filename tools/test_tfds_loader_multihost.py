@@ -202,6 +202,18 @@ def _concat_lists(left: List[str], right: List[str]) -> List[str]:
     return list(left) + list(right)
 
 
+def _concat_rank_series(left, right):
+    return list(left) + list(right)
+
+
+def _concat_tensors(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
+    if left.numel() == 0:
+        return right
+    if right.numel() == 0:
+        return left
+    return torch.cat((left, right), dim=0)
+
+
 def _build_args(data_dir: str,
                 train_pp: str,
                 eval_pp: str,
@@ -371,22 +383,26 @@ def main() -> None:
     xm.rendezvous("collect_metrics")
 
     device = xm.xla_device()
-    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
-    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64, device=device)
+    loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32)
+    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64)
 
-    gathered_throughputs = xm.all_gather(loop_tensor, dim=0).cpu()
-    gathered_ids = xm.all_gather(id_tensor, dim=0).cpu()
-
-    global_loop_avg = gathered_throughputs.mean(dim=0).tolist()
+    per_rank_series = xm.mesh_reduce(
+        "throughput_by_rank",
+        [(rank, local_throughputs)],
+        _concat_rank_series,
+    )
+    all_id_hashes = xm.mesh_reduce("tfds_id_hashes", id_tensor, _concat_tensors)
 
     if xm.is_master_ordinal():
         per_rank_throughputs: Dict[int, List[float]] = {
-            worker: gathered_throughputs[worker].tolist()
-            for worker in range(world_size)
+            worker: series for worker, series in per_rank_series
         }
+        global_loop_avg = [
+            sum(series[idx] for series in per_rank_throughputs.values()) / world_size
+            for idx in range(cli_args.num_loops)
+        ]
 
-        per_rank_id_hashes = gathered_ids.reshape(world_size, total_samples_per_rank).numpy().tolist()
-        flat_ids = [item for sublist in per_rank_id_hashes for item in sublist]
+        flat_ids = all_id_hashes.numpy().tolist()
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
