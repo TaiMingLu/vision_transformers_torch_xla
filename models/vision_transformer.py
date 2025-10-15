@@ -45,7 +45,7 @@ from timm.data import (
     IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD,
     OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 )
-from timm.layers import (
+from ._compat import (
     Attention,
     AttentionPoolLatent,
     PatchEmbed,
@@ -64,8 +64,8 @@ from timm.layers import (
     get_act_layer,
     get_norm_layer,
     LayerType,
+    maybe_add_mask,
 )
-from ._compat import maybe_add_mask
 from ._builder import build_model_with_cfg
 from ._features import feature_take_indices
 from ._manipulate import named_apply, checkpoint, checkpoint_seq, adapt_input_conv
