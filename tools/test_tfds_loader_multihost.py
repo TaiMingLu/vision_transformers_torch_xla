@@ -342,7 +342,7 @@ def main() -> None:
             loop_ids.append(tfds_id)
             id_digest = hashlib.blake2b(
                 tfds_id.encode('utf-8'), digest_size=8).digest()
-            local_id_hashes.append(int.from_bytes(id_digest, 'big', signed=False))
+            local_id_hashes.append(int.from_bytes(id_digest, 'big', signed=True))
         elapsed = perf_counter() - start
         throughput = cli_args.samples_per_loop / max(elapsed, 1e-6)
 
