@@ -20,7 +20,16 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt && python -m pip install libtpu-nightly==0.1.dev20240521 --extra-index-url https://storage.googleapis.com/libtpu-releases/index.html'
+  --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt'
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+  --project=${PROJECT_ID} --zone=${ZONE} \
+  --worker=all \
+  --ssh-key-file="~/.ssh/id_rsa" \
+  --command='python - <<'PY'
+import torch_xla.core.xla_model as xm
+print(xm.get_xla_supported_devices())
+PY
+'
 
 # Dat loader testing
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
