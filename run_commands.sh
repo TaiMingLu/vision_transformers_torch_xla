@@ -47,6 +47,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
     --project=${PROJECT_ID} --zone=${ZONE} --worker=0 \
     --ssh-key-file="~/.ssh/id_rsa" \
     --command="
+    export TPU_PREFIX=taiming-v4-64
     source ~/vision_env/bin/activate
      cd ~/vision
      bash run.sh"

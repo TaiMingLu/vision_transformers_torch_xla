@@ -10,6 +10,7 @@ python -u multihost_runner_orig.py \
     export TPU_LOG_DIR=/home/terry/tpu_logs
     source ~/vision_env/bin/activate
     export WANDB_API_KEY=01126ae90da25bae0d86704140ac978cb9fd9c73
+    cd ~/vision
     python3.10 -u -m tools/test_tfds_loader_multihost.py \
         --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
         --samples-per-loop 128 --num-loops 32'
