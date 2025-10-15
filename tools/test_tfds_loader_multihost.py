@@ -375,7 +375,7 @@ def main() -> None:
 
     device = xm.xla_device()
     loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
-    loop_sums = xm.all_reduce(xm.ReduceOp.SUM, loop_tensor)
+    loop_sums = xm.all_reduce("sum", loop_tensor)
     global_loop_avg = [value / world_size for value in loop_sums.cpu().tolist()]
 
     per_rank_throughputs = xm.mesh_reduce(
