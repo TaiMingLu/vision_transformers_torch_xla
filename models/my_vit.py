@@ -17,12 +17,15 @@ _CFG_LOOKUP = {
 }
 
 for _model_name, _source_key in _CFG_LOOKUP.items():
-    if _model_name not in default_cfgs and _source_key in default_cfgs:
-        _src_cfg = default_cfgs[_source_key]
-        if hasattr(_src_cfg, 'to_dict'):
-            default_cfgs[_model_name] = _src_cfg.to_dict()
-        else:
-            default_cfgs[_model_name] = copy.deepcopy(_src_cfg)
+    _src_cfg = default_cfgs.get(_model_name)
+    if _src_cfg is None:
+        _src_cfg = default_cfgs.get(_source_key)
+    if _src_cfg is None:
+        continue
+    if hasattr(_src_cfg, 'to_dict'):
+        default_cfgs[_model_name] = _src_cfg.to_dict()
+    else:
+        default_cfgs[_model_name] = copy.deepcopy(_src_cfg)
 
 
 def _resolve_cfg(model_name: str):
