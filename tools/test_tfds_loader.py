@@ -27,6 +27,7 @@ import sys
 from pathlib import Path
 from time import perf_counter
 from types import SimpleNamespace
+from typing import List
 
 import torch
 
@@ -102,7 +103,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--split", default="train", choices=["train", "validation"],
                         help="TFDS split to iterate")
     parser.add_argument("--num-samples", type=int, default=8,
-                        help="Number of samples to draw for the smoke test")
+                        help="Number of samples to draw per loop")
     parser.add_argument("--train-pp", default="decode_jpeg_and_inception_crop(224)|flip_lr|value_range(0, 1)|keep(\"image\", \"label\")",
                         help="big_vision preprocessing string for training")
     parser.add_argument("--eval-pp", default="decode|resize_small(256)|central_crop(224)|value_range(0, 1)|keep(\"image\", \"label\")",
@@ -119,8 +120,10 @@ def parse_args() -> argparse.Namespace:
                         help="Total number of processes participating in the data pipeline")
     parser.add_argument("--rank", type=int, default=None,
                         help="This process's rank (0-indexed)")
+    parser.add_argument("--num-loops", type=int, default=1,
+                        help="Number of iterations to run through the dataset")
     parser.add_argument("--time-it", action="store_true",
-                        help="Print rough throughput timing for the requested samples")
+                        help="Print rough throughput timing for each loop and a summary")
     return parser.parse_args()
 
 
@@ -159,18 +162,44 @@ def main() -> None:
     print(f"Dataset built (split={cli_args.split}) rank={rank}/{world_size}. "
           f"num_classes={num_classes}")
 
+    if cli_args.num_loops <= 0:
+        raise ValueError("num_loops must be >= 1")
+
     iterator = iter(dataset)
-    start = perf_counter() if cli_args.time_it else None
+    throughput_history: List[float] = []
 
-    for idx in range(cli_args.num_samples):
-        image, label = next(iterator)
-        assert isinstance(image, torch.Tensor) and isinstance(label, torch.Tensor)
-        print(f"[{idx}] image shape={tuple(image.shape)} dtype={image.dtype} label={int(label)}")
+    global_index = 0
+    for loop_idx in range(cli_args.num_loops):
+        loop_start = perf_counter() if cli_args.time_it else None
+        for sample_idx in range(cli_args.num_samples):
+            image, label = next(iterator)
+            assert isinstance(image, torch.Tensor) and isinstance(label, torch.Tensor)
+            if cli_args.num_loops == 1:
+                prefix = f"[{sample_idx}]"
+            else:
+                prefix = (f"[loop {loop_idx + 1}/{cli_args.num_loops} sample {sample_idx} "
+                          f"global {global_index}]")
+            print(f"{prefix} image shape={tuple(image.shape)} dtype={image.dtype} label={int(label)}")
+            global_index += 1
 
-    if start is not None:
-        elapsed = perf_counter() - start
-        print(f"Timing: fetched {cli_args.num_samples} samples in {elapsed:.2f}s"
-              f" ⇒ {(cli_args.num_samples / max(elapsed, 1e-6)):.2f} samples/s")
+        if loop_start is not None:
+            elapsed = perf_counter() - loop_start
+            throughput = cli_args.num_samples / max(elapsed, 1e-6)
+            throughput_history.append(throughput)
+            if cli_args.num_loops == 1:
+                print(f"Timing: fetched {cli_args.num_samples} samples in {elapsed:.2f}s"
+                      f" ⇒ {throughput:.2f} samples/s")
+            else:
+                print(f"Timing (loop {loop_idx + 1}/{cli_args.num_loops}): fetched "
+                      f"{cli_args.num_samples} samples in {elapsed:.2f}s ⇒ {throughput:.2f} samples/s")
+
+    if cli_args.time_it and cli_args.num_loops > 1:
+        best = max(throughput_history, default=0.0)
+        worst = min(throughput_history, default=0.0)
+        avg = sum(throughput_history) / max(len(throughput_history), 1)
+        print("Throughput summary: "
+              f"min {worst:.2f} / max {best:.2f} / avg {avg:.2f} samples/s"
+              f" over {cli_args.num_loops} loops")
 
     print("✅ TFDS loader smoke test completed successfully")
 

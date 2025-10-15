@@ -15,34 +15,25 @@ gcloud compute tpus tpu-vm ssh "$TPU_NAME" \
   --zone="$ZONE" --project="$PROJECT_ID" --worker=all \
   --command '
 #!/bin/bash
-cd /home/terry/gcs-bucket/Distillation/vision/train
-
-# Clear any conflicting environment variables
-unset MASTER_ADDR MASTER_PORT RANK WORLD_SIZE LOCAL_RANK LOCAL_WORLD_SIZE
-unset NCCL_SOCKET_IFNAME NCCL_IB_HCA NCCL_IB_GID_INDEX NCCL_DEBUG
+cd /home/terry/vision
 
 # Set essential TPU environment variables
 export USE_TPU=1
 export XLA_USE_BF16=1
 export PJRT_DEVICE=TPU
 
-# Use the standard XLA multiprocessing launcher
-python3 -m torch_xla.distributed.xla_dist \
-    --tpu=$TPU_NAME \
-    --restart-tpu-pod-server \
-    -- \
-    python3 main.py \
+PJRT_DEVICE=TPU torchrun --nproc_per_node=8 main.py \
     --tpu \
     --model my_vit_b \
-    --epochs 100 \
+    --epochs 300 \
     --drop_path 0.1 \
-    --batch_size 32 \
+    --batch_size 512 \
     --update_freq 1 \
     --model_ema true \
     --model_ema_eval true \
-    --data_set IMNET_HDF5 \
-    --data_path /home/terry/gcs-bucket/Distillation/vision/datasets/imagenet-hdf5 \
-    --output_dir /home/terry/gcs-bucket/Distillation/vision/models/vanilla \
+    --data_set IMNET \
+    --data_path /home/terry/gcs-bucket/Distillation/imagenet_tfds \
+    --output_dir /home/terry/gcs-bucket/Distillation/models/vanilla \
     --experiment b-vanilla
 ' 2>&1 | tee ~/train_tpu_v4_64.log
 
