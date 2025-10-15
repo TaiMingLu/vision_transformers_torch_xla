@@ -8,4 +8,3 @@ wandb==0.16.6
 tensorboard==2.15.1
 tensorflow==2.15.1
 tensorflow-datasets==4.9.3
-big-vision @ git+https://github.com/google-research/big_vision@main

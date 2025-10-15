@@ -14,16 +14,16 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='rm -rf ~/vision_env'
-
-gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
-  --project=${PROJECT_ID} --zone=${ZONE} \
-  --worker=all \
-  --ssh-key-file="~/.ssh/id_rsa" \
   --command='rm -rf ~/vision && git clone https://github.com/TaiMingLu/vision_transformers_torch_xla.git ~/vision'
 
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt'
+  --command='rm -rf ~/vision_env && python3 -m venv ~/vision_env && source ~/vision_env/bin/activate && python -m pip install -r /home/terry/vision/requirements.txt'
+
+gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
+  --project=${PROJECT_ID} --zone=${ZONE} \
+  --worker=all \
+  --ssh-key-file="~/.ssh/id_rsa" \
+  --command='cd ~/vision && git pull && cd ~'
