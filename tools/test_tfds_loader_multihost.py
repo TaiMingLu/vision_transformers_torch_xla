@@ -198,16 +198,22 @@ def _env_default(name: str, fallback: int) -> int:
         return fallback
 
 
-def _merge_rank_series(left: Dict[int, List[float]], right: Dict[int, List[float]]) -> Dict[int, List[float]]:
-    merged = dict(left)
-    merged.update(right)
-    return merged
+def _concat_float_tensors(left, right):
+    def _to_tensor(value):
+        if isinstance(value, torch.Tensor):
+            return value.detach().cpu().float()
+        return torch.tensor(value, dtype=torch.float32)
+
+    return torch.cat((_to_tensor(left), _to_tensor(right)), dim=0)
 
 
-def _merge_id_hashes(left: Dict[int, List[int]], right: Dict[int, List[int]]) -> Dict[int, List[int]]:
-    merged = dict(left)
-    merged.update(right)
-    return merged
+def _concat_long_tensors(left, right):
+    def _to_tensor(value):
+        if isinstance(value, torch.Tensor):
+            return value.detach().cpu().long()
+        return torch.tensor(value, dtype=torch.int64)
+
+    return torch.cat((_to_tensor(left), _to_tensor(right)), dim=0)
 
 
 def _build_args(data_dir: str,
@@ -378,33 +384,41 @@ def main() -> None:
 
     xm.rendezvous("collect_metrics")
 
-    throughput_payload = {rank: list(local_throughputs)}
-    id_payload = {rank: list(local_id_hashes)}
+    throughput_payload = torch.tensor([rank, *local_throughputs], dtype=torch.float32)
+    id_payload = torch.empty(total_samples_per_rank + 1, dtype=torch.int64)
+    id_payload[0] = rank
+    id_payload[1:] = torch.tensor(local_id_hashes, dtype=torch.int64)
 
-    per_rank_throughputs = xm.mesh_reduce("throughput_by_rank", throughput_payload, _merge_rank_series)
-    per_rank_ids = xm.mesh_reduce("tfds_id_hashes", id_payload, _merge_id_hashes)
+    all_throughputs = xm.mesh_reduce("throughput_series", throughput_payload, _concat_float_tensors)
+    all_id_hashes = xm.mesh_reduce("tfds_id_hashes", id_payload, _concat_long_tensors)
 
     if xm.is_master_ordinal():
-        if not isinstance(per_rank_throughputs, dict):
-            raise RuntimeError("mesh_reduce returned unexpected payload for throughputs")
-        if not isinstance(per_rank_ids, dict):
-            raise RuntimeError("mesh_reduce returned unexpected payload for id hashes")
-
-        missing = [idx for idx in range(world_size) if idx not in per_rank_throughputs]
-        if missing:
-            raise RuntimeError(f"Missing throughput series for ranks: {missing}")
-
+        per_rank_matrix = all_throughputs.view(-1, cli_args.num_loops + 1)
+        per_rank_throughputs: Dict[int, List[float]] = {
+            int(row[0].item()): row[1:].tolist() for row in per_rank_matrix
+        }
+        missing_throughputs = sorted(set(range(world_size)) - set(per_rank_throughputs))
+        if missing_throughputs:
+            raise RuntimeError(f"Missing throughput series for ranks: {missing_throughputs}")
         global_loop_avg = [
             sum(per_rank_throughputs[idx][loop_idx] for idx in range(world_size)) / world_size
             for loop_idx in range(cli_args.num_loops)
         ]
 
+        id_matrix = all_id_hashes.view(-1, total_samples_per_rank + 1)
         flat_ids: List[int] = []
-        for idx in range(world_size):
-            series = per_rank_ids.get(idx)
-            if series is None:
-                raise RuntimeError(f"Missing TFDS ids for rank {idx}")
+        seen_ranks = set()
+        for row in id_matrix:
+            worker = int(row[0].item())
+            series = row[1:].tolist()
+            if len(series) != total_samples_per_rank:
+                raise RuntimeError(
+                    f"Rank {worker} reported {len(series)} TFDS ids, expected {total_samples_per_rank}")
             flat_ids.extend(series)
+            seen_ranks.add(worker)
+        missing_ids = sorted(set(range(world_size)) - seen_ranks)
+        if missing_ids:
+            raise RuntimeError(f"Missing TFDS ids for ranks: {missing_ids}")
         expected_total = total_samples_per_rank * world_size
         if len(flat_ids) != expected_total:
             raise RuntimeError(
