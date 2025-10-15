@@ -12,6 +12,7 @@ from __future__ import annotations
 import dataclasses
 import os
 import time
+from datetime import datetime
 from typing import Iterator, Optional
 
 import numpy as np
@@ -23,6 +24,11 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 try:
     import tensorflow as tf
     import tensorflow_datasets as tfds
+    try:
+        tf.get_logger().setLevel('ERROR')
+        tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    except Exception:
+        pass
 except ImportError as exc:  # pragma: no cover - handled at runtime
     raise ImportError(
         "tensorflow and tensorflow_datasets must be installed to use the"
@@ -85,27 +91,29 @@ class BigVisionImageNetDataset(IterableDataset):
             f"[BigVisionDataset][PID {self._pid}] split={config.split} "
             f"proc={config.process_index}/{config.process_count}"
         )
-        print(
-            f"{self._log_prefix} -> init start (train={config.is_train})",
-            flush=True,
-        )
+        log_dir = os.environ.get("TPU_LOG_DIR")
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+            safe_split = config.split.replace('/', '_')
+            self._log_path = os.path.join(
+                log_dir,
+                f"dataset_{safe_split}_rank{config.process_index}_pid{self._pid}.log",
+            )
+        else:
+            self._log_path = None
+        self._log("init start (train=%s)" % config.is_train)
         self._config = config
         if config.data_dir is None:
             raise ValueError(
                 "TFDS data directory not provided. Set --tfds_data_dir or --data_path"
                 " to the root containing imagenet2012 TFDS files.")
         builder_start = time.time()
-        print(
-            f"{self._log_prefix} -> constructing tfds builder at {config.data_dir}",
-            flush=True,
-        )
+        self._log(f"constructing tfds builder at {config.data_dir}")
         self._builder = tfds.builder(
             config.name, data_dir=config.data_dir, try_gcs=True
         )
-        print(
-            f"{self._log_prefix} -> tfds builder ready in "
-            f"{time.time() - builder_start:.2f}s",
-            flush=True,
+        self._log(
+            "tfds builder ready in %.2fs" % (time.time() - builder_start)
         )
         self._split = config.split
         base_split = self._split.split('[')[0]
@@ -128,11 +136,30 @@ class BigVisionImageNetDataset(IterableDataset):
         if not (0 <= config.process_index < config.process_count):
             raise ValueError("process_index must satisfy 0 <= index < count")
 
-        print(
-            f"{self._log_prefix} -> init done in {time.time() - init_start:.2f}s "
-            f"(global={self._global_size}, local={self._local_size})",
-            flush=True,
+        self._log(
+            "init done in %.2fs (global=%s, local=%s)" % (
+                time.time() - init_start,
+                self._global_size,
+                self._local_size,
+            )
         )
+
+    def _log(self, message: str) -> None:
+        timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        formatted = f"{timestamp} {self._log_prefix} -> {message}"
+        try:
+            import torch_xla.core.xla_model as xm  # type: ignore
+
+            xm.master_print(formatted, flush=True)
+        except Exception:
+            print(formatted, flush=True)
+        if not self._log_path:
+            return
+        try:
+            with open(self._log_path, "a", encoding="utf-8") as handle:
+                handle.write(formatted + "\n")
+        except OSError:
+            pass
 
     @staticmethod
     def _compute_local_size(global_size: int, process_index: int,
@@ -153,10 +180,9 @@ class BigVisionImageNetDataset(IterableDataset):
         should_log = current_epoch <= 3 or current_epoch % 5 == 0
         build_start = time.time()
         if should_log:
-            print(
-                f"{self._log_prefix} -> _build_tf_dataset start "
-                f"(epoch={current_epoch}, seed={epoch_seed})",
-                flush=True,
+            self._log(
+                "_build_tf_dataset start (epoch=%s, seed=%s)"
+                % (current_epoch, epoch_seed)
             )
 
         read_config = tfds.ReadConfig(
@@ -177,29 +203,19 @@ class BigVisionImageNetDataset(IterableDataset):
             decoders=decoders,
         )
         if should_log:
-            print(
-                f"{self._log_prefix} -> as_dataset duration "
-                f"{time.time() - stage_start:.2f}s",
-                flush=True,
-            )
+            self._log("as_dataset duration %.2fs" % (time.time() - stage_start))
 
         stage_start = time.time()
         ds = _add_tpu_host_options(ds, self._config.private_threadpool_size)
         if should_log:
-            print(
-                f"{self._log_prefix} -> add_host_options duration "
-                f"{time.time() - stage_start:.2f}s",
-                flush=True,
+            self._log(
+                "add_host_options duration %.2fs" % (time.time() - stage_start)
             )
         if self._config.cache:
             stage_start = time.time()
             ds = ds.cache()
             if should_log:
-                print(
-                    f"{self._log_prefix} -> cache() duration "
-                    f"{time.time() - stage_start:.2f}s",
-                    flush=True,
-                )
+                self._log("cache() duration %.2fs" % (time.time() - stage_start))
         if self._config.is_train and self._config.shuffle_buffer_size > 0:
             stage_start = time.time()
             ds = ds.shuffle(
@@ -208,33 +224,25 @@ class BigVisionImageNetDataset(IterableDataset):
                 reshuffle_each_iteration=True,
             )
             if should_log:
-                print(
-                    f"{self._log_prefix} -> shuffle() duration "
-                    f"{time.time() - stage_start:.2f}s",
-                    flush=True,
-                )
+                self._log("shuffle() duration %.2fs" % (time.time() - stage_start))
         stage_start = time.time()
         ds = ds.map(self._preprocess_fn,
                     num_parallel_calls=self._config.num_parallel_calls)
         if should_log:
-            print(
-                f"{self._log_prefix} -> map() duration {time.time() - stage_start:.2f}s",
-                flush=True,
+            self._log(
+                "map() duration %.2fs" % (time.time() - stage_start)
             )
         if self._config.prefetch:
             stage_start = time.time()
             ds = ds.prefetch(self._config.prefetch)
             if should_log:
-                print(
-                    f"{self._log_prefix} -> prefetch({self._config.prefetch}) duration "
-                    f"{time.time() - stage_start:.2f}s",
-                    flush=True,
+                self._log(
+                    "prefetch(%s) duration %.2fs"
+                    % (self._config.prefetch, time.time() - stage_start)
                 )
         if should_log:
-            print(
-                f"{self._log_prefix} -> _build_tf_dataset total "
-                f"{time.time() - build_start:.2f}s",
-                flush=True,
+            self._log(
+                "_build_tf_dataset total %.2fs" % (time.time() - build_start)
             )
         return ds
 
@@ -255,27 +263,20 @@ class BigVisionImageNetDataset(IterableDataset):
         should_log = self._epoch <= 3 or self._epoch % 5 == 0
         iter_start = time.time()
         if should_log:
-            print(
-                f"{self._log_prefix} -> iterator start epoch={self._epoch} "
-                f"seed={epoch_seed}",
-                flush=True,
-            )
+            self._log("iterator start epoch=%s seed=%s" % (self._epoch, epoch_seed))
 
         ds = self._build_tf_dataset(epoch_seed)
         if should_log:
-            print(
-                f"{self._log_prefix} -> tf.data pipeline built in "
-                f"{time.time() - iter_start:.2f}s",
-                flush=True,
+            self._log(
+                "tf.data pipeline built in %.2fs" % (time.time() - iter_start)
             )
 
         iterator_start = time.time()
         dataset_iterator = ds.as_numpy_iterator()
         if should_log:
-            print(
-                f"{self._log_prefix} -> numpy iterator ready in "
-                f"{time.time() - iterator_start:.2f}s",
-                flush=True,
+            self._log(
+                "numpy iterator ready in %.2fs"
+                % (time.time() - iterator_start)
             )
 
         example_count = 0
@@ -284,10 +285,8 @@ class BigVisionImageNetDataset(IterableDataset):
             fetch_elapsed = time.time() - fetch_start
             example_count += 1
             if should_log and (example_count <= 5 or example_count % 10000 == 0):
-                print(
-                    f"{self._log_prefix} -> fetched example {example_count} in "
-                    f"{fetch_elapsed:.3f}s",
-                    flush=True,
+                self._log(
+                    "fetched example %s in %.3fs" % (example_count, fetch_elapsed)
                 )
 
             image = example['image']
@@ -301,6 +300,8 @@ class BigVisionImageNetDataset(IterableDataset):
 
             if image.dtype != np.float32:
                 image = image.astype(np.float32)
+            if not image.flags.writeable:
+                image = np.array(image, copy=True)
             # tf.data returns images in HWC; convert to CHW for PyTorch.
             image = np.transpose(image, (2, 0, 1))
             torch_image = torch.from_numpy(image).contiguous()
@@ -315,10 +316,9 @@ class BigVisionImageNetDataset(IterableDataset):
             fetch_start = time.time()
 
         if should_log:
-            print(
-                f"{self._log_prefix} -> iterator exhausted after {example_count} "
-                f"examples in {time.time() - iter_start:.2f}s",
-                flush=True,
+            self._log(
+                "iterator exhausted after %s examples in %.2fs"
+                % (example_count, time.time() - iter_start)
             )
 
 
@@ -347,10 +347,13 @@ def build_dataset(is_train: bool, args):
         shuffle_buffer = 0
 
     build_start = time.time()
-    print(
-        f"[build_dataset] start is_train={is_train} split={split} "
-        f"rank={process_index}/{process_count} data_dir={data_dir}",
-        flush=True,
+    _global_dataset_log(
+        "start",
+        is_train=is_train,
+        split=split,
+        rank=process_index,
+        world_size=process_count,
+        data_dir=data_dir,
     )
 
     config = BigVisionLoaderConfig(
@@ -373,9 +376,40 @@ def build_dataset(is_train: bool, args):
     )
 
     dataset = BigVisionImageNetDataset(config)
-    print(
-        f"[build_dataset] done in {time.time() - build_start:.2f}s "
-        f"(global={len(dataset)}, local={dataset._local_size})",
-        flush=True,
+    _global_dataset_log(
+        "done",
+        is_train=is_train,
+        split=split,
+        rank=process_index,
+        world_size=process_count,
+        latency=time.time() - build_start,
+        global_size=len(dataset),
+        local_size=dataset._local_size,
     )
     return dataset, dataset.num_classes
+
+
+def _global_dataset_log(event: str, **fields) -> None:
+    timestamp = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    pieces = [f"{k}={fields[k]}" for k in sorted(fields)]
+    message = f"[build_dataset][{event}] {timestamp} " + " ".join(pieces)
+    try:
+        import torch_xla.core.xla_model as xm  # type: ignore
+
+        xm.master_print(message, flush=True)
+    except Exception:  # pragma: no cover - best effort logging
+        print(message, flush=True)
+    log_dir = os.environ.get("TPU_LOG_DIR")
+    if not log_dir:
+        return
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(log_dir, "dataset_global.log")
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(message + "\n")
+    except OSError:
+        pass
+
+
+    
+    

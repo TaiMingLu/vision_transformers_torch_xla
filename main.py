@@ -12,6 +12,7 @@ import argparse
 import datetime
 import numpy as np
 import time
+import warnings
 # print("🔥 Importing torch...", flush=True)
 import torch
 import torch.nn as nn
@@ -102,6 +103,8 @@ import torch_xla.runtime as xr
 #   torch.distributed.init_process_group(backend="xla", init_method="xla://")
 import torch_xla.distributed.xla_backend  # import for side-effects; no alias
 # print("   ✅ torch_xla.distributed.xla_backend imported", flush=True)
+
+warnings.filterwarnings("ignore", category=FutureWarning, module="timm.models.layers")
 
 print("🎉 ALL IMPORTS COMPLETED SUCCESSFULLY!", flush=True)
 # if not dist.is_initialized():
@@ -414,58 +417,74 @@ def main(args):
                 length = "unknown"
             return f"{type(ds).__name__}(len={length})"
 
-        print(
-            "TPU spawned process: received pre-built datasets -> "
-            f"train={_dataset_summary(dataset_train)}, "
-            f"val={_dataset_summary(dataset_val)}",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s received pre-built datasets train=%s val=%s"
+            % (
+                utils.get_rank(),
+                _dataset_summary(dataset_train),
+                _dataset_summary(dataset_val),
+            ),
         )
     elif args.tpu:
         # Main TPU process: just get nb_classes for validation, datasets created in spawned processes
-        print("TPU main process: fetching training dataset metadata...", flush=True)
+        _log_event("main", "rank=%s fetching dataset metadata" % utils.get_rank())
         metadata_start = time.time()
         _, args.nb_classes = build_dataset(is_train=True, args=args)
-        print(
-            "TPU main process: metadata fetch done in "
-            f"{time.time() - metadata_start:.2f}s",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s metadata fetch done in %.2fs"
+            % (utils.get_rank(), time.time() - metadata_start),
         )
         dataset_train = None  # Will be created in spawned process
         dataset_val = None    # Will be created in spawned process
     else:
         # Non-TPU mode: create datasets normally
-        print("CPU/GPU mode: building training dataset...", flush=True)
+        _log_event("main", "rank=%s building training dataset" % utils.get_rank())
         build_train_start = time.time()
         dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
         try:
             dataset_train_len = len(dataset_train)
         except Exception:  # pragma: no cover - diagnostics only
             dataset_train_len = "unknown"
-        print(
-            "CPU/GPU mode: training dataset ready in "
-            f"{time.time() - build_train_start:.2f}s (len={dataset_train_len})",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s training dataset ready in %.2fs len=%s"
+            % (
+                utils.get_rank(),
+                time.time() - build_train_start,
+                dataset_train_len,
+            ),
         )
         if args.disable_eval:
             args.dist_eval = False
             dataset_val = None
-            print("CPU/GPU mode: evaluation disabled via flag", flush=True)
+            _log_event("main", "rank=%s eval disabled" % utils.get_rank())
         else:
-            print("CPU/GPU mode: building eval dataset...", flush=True)
+            _log_event("main", "rank=%s building eval dataset" % utils.get_rank())
             build_val_start = time.time()
             dataset_val, _ = build_dataset(is_train=False, args=args)
             try:
                 dataset_val_len = len(dataset_val)
             except Exception:  # pragma: no cover - diagnostics only
                 dataset_val_len = "unknown"
-            print(
-                "CPU/GPU mode: eval dataset ready in "
-                f"{time.time() - build_val_start:.2f}s (len={dataset_val_len})",
-                flush=True,
+            _log_event(
+                "main",
+                "rank=%s eval dataset ready in %.2fs len=%s"
+                % (
+                    utils.get_rank(),
+                    time.time() - build_val_start,
+                    dataset_val_len,
+                ),
             )
     
     num_tasks = utils.get_world_size()
     global_rank = utils.get_rank()
+    _log_event(
+        "main",
+        "rank=%s dataset setup complete train=%s val=%s"
+        % (global_rank, dataset_train is not None, dataset_val is not None),
+    )
 
     is_bigvision_train = isinstance(dataset_train, BigVisionImageNetDataset)
     is_bigvision_val = isinstance(dataset_val, BigVisionImageNetDataset)
@@ -535,15 +554,19 @@ def main(args):
             pin_memory=pin_memory_train,
             drop_last=True,
         )
-        print(
-            f"Training DataLoader constructed in "
-            f"{time.time() - dataloader_train_start:.2f}s "
-            f"(workers={num_workers_train}, pin_memory={pin_memory_train})",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s train loader ready in %.2fs workers=%s pin_memory=%s"
+            % (
+                utils.get_rank(),
+                time.time() - dataloader_train_start,
+                num_workers_train,
+                pin_memory_train,
+            ),
         )
     else:
         data_loader_train = None
-        print("Training dataset unavailable; skipping DataLoader construction", flush=True)
+        _log_event("main", "rank=%s no training dataset" % utils.get_rank())
 
     if dataset_val is not None:
         if tpu_mode or is_bigvision_val:
@@ -565,15 +588,19 @@ def main(args):
             pin_memory=pin_memory_val,
             drop_last=False,
         )
-        print(
-            f"Validation DataLoader constructed in "
-            f"{time.time() - dataloader_val_start:.2f}s "
-            f"(workers={num_workers_val}, pin_memory={pin_memory_val})",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s val loader ready in %.2fs workers=%s pin_memory=%s"
+            % (
+                utils.get_rank(),
+                time.time() - dataloader_val_start,
+                num_workers_val,
+                pin_memory_val,
+            ),
         )
     else:
         data_loader_val = None
-        print("Validation dataset unavailable; skipping DataLoader construction", flush=True)
+        _log_event("main", "rank=%s no validation dataset" % utils.get_rank())
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -583,6 +610,8 @@ def main(args):
             mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
+
+    _log_event("main", "rank=%s creating model %s" % (global_rank, args.model))
 
     if "convnext" in args.model:
         model = create_model(
@@ -631,9 +660,15 @@ def main(args):
     # For TPU, force another XLA synchronization after model.to(device)
     if args.tpu:
         import torch_xla.core.xla_model as xm
-        print("Forcing XLA synchronization after model.to(device)...")
+        _log_event(
+            "main",
+            "rank=%s forcing XLA mark_step after model.to" % global_rank,
+        )
         xm.mark_step()  # Force XLA synchronization
-        print("XLA mark_step() after model.to(device) completed")
+        _log_event(
+            "main",
+            "rank=%s completed XLA mark_step after model.to" % global_rank,
+        )
 
     # Load teacher model for knowledge distillation
     teacher_model = None
@@ -817,14 +852,14 @@ def main(args):
     if args.kd and hasattr(model_without_ddp, 'student'):
         student_model_for_optimizer = model_without_ddp.student
 
-    print("About to create optimizer...")
+    _log_event("main", "rank=%s creating optimizer" % global_rank)
     
     # Use the proper create_optimizer function for all cases (now TPU-safe)
     optimizer = create_optimizer(
         args, student_model_for_optimizer, skip_list=None,
         get_num_layer=assigner.get_layer_id if assigner is not None else None, 
         get_layer_scale=assigner.get_scale if assigner is not None else None)
-    print("Optimizer created successfully")
+    _log_event("main", "rank=%s optimizer ready" % global_rank)
 
     # Skip extra XLA sync after optimizer - let xm.optimizer_step handle synchronization
 
@@ -841,14 +876,13 @@ def main(args):
         loss_scaler = NativeScaler(device=device_type)
         print("Loss scaler created successfully")
 
-    print("About to create Cosine LR scheduler...", flush=True)
+    _log_event("main", "rank=%s creating LR scheduler" % global_rank)
     lr_schedule_values = utils.cosine_scheduler(
         args.lr, args.min_lr, args.epochs, num_training_steps_per_epoch,
         warmup_epochs=args.warmup_epochs, warmup_steps=args.warmup_steps,
     )
-    print("LR scheduler created successfully", flush=True)
-    print("About to continue to weight decay scheduler...", flush=True)
-    print("About to check args.weight_decay_end...", flush=True)
+    _log_event("main", "rank=%s LR scheduler ready" % global_rank)
+    _log_event("main", "rank=%s preparing weight decay schedule" % global_rank)
     
     # Bypass the problematic attribute access - just set it directly
     print("Directly setting weight_decay_end to avoid freeze...", flush=True)
@@ -856,11 +890,14 @@ def main(args):
         args.weight_decay_end = args.weight_decay
     print(f"weight_decay_end set to: {args.weight_decay_end}", flush=True)
     
-    print("About to call cosine_scheduler for weight decay...", flush=True)
+    _log_event(
+        "main",
+        "rank=%s creating WD schedule" % global_rank
+    )
     print(f"Calling with: wd={args.weight_decay}, wd_end={args.weight_decay_end}, epochs={args.epochs}, steps_per_epoch={num_training_steps_per_epoch}", flush=True)
     wd_schedule_values = utils.cosine_scheduler(
         args.weight_decay, args.weight_decay_end, args.epochs, num_training_steps_per_epoch)
-    print("cosine_scheduler completed, about to calculate min/max...", flush=True)
+    _log_event("main", "rank=%s WD schedule ready" % global_rank)
     
     if args.tpu:
         print(f"Weight decay schedule created: {args.weight_decay} -> {args.weight_decay_end}", flush=True)
@@ -868,7 +905,7 @@ def main(args):
         print("About to calculate min/max of wd_schedule_values...", flush=True)
         print("Max WD = %.7f, Min WD = %.7f" % (max(wd_schedule_values), min(wd_schedule_values)), flush=True)
 
-    print("About to create criterion...", flush=True)
+    _log_event("main", "rank=%s creating criterion" % global_rank)
     if mixup_fn is not None:
         # smoothing is handled with mixup label transform
         criterion = SoftTargetCrossEntropy()
@@ -921,11 +958,11 @@ def main(args):
     if args.tpu:
         print("TPU mode: Skipping warmup (caused shape errors), will compile on first iteration", flush=True)
 
-    print("About to call auto_load_model...", flush=True)
+    _log_event("main", "rank=%s calling auto_load_model" % global_rank)
     utils.auto_load_model(
         args=args, model=model, model_without_ddp=model_without_ddp,
         optimizer=optimizer, loss_scaler=loss_scaler, model_ema=model_ema)
-    print("auto_load_model completed", flush=True)
+    _log_event("main", "rank=%s auto_load_model complete" % global_rank)
 
     print("About to define get_eval_model helper function...", flush=True)
     # Helper function to get the model for evaluation (student only for KD)
@@ -945,7 +982,7 @@ def main(args):
         print(f"Accuracy of the network on {len(dataset_val)} test images: {test_stats['acc1']:.5f}%", flush=True)
         return
 
-    print("About to set max_accuracy...", flush=True)
+    _log_event("main", "rank=%s entering training loop" % global_rank)
     max_accuracy = 0.0
     if args.model_ema and args.model_ema_eval:
         max_accuracy_ema = 0.0
@@ -1138,35 +1175,30 @@ def main_tpu(args):
     np.random.seed(seed)
 
     # Create datasets in this process (avoiding pickle issues)
-    print(
-        f"TPU worker rank {worker_rank}: building training dataset...",
-        flush=True,
-    )
+    _log_event("main", f"rank={worker_rank} building training dataset (worker)")
     dataset_train_start = time.time()
     dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
-    print(
-        f"TPU worker rank {worker_rank}: training dataset ready in "
-        f"{time.time() - dataset_train_start:.2f}s",
-        flush=True,
+    _log_event(
+        "main",
+        "rank=%s training dataset ready in %.2fs (worker)"
+        % (worker_rank, time.time() - dataset_train_start),
     )
     if args.disable_eval:
         args.dist_eval = False
         dataset_val = None
-        print(
-            f"TPU worker rank {worker_rank}: evaluation disabled via flag",
-            flush=True,
+        _log_event(
+            "main", f"rank={worker_rank} evaluation disabled via flag (worker)"
         )
     else:
-        print(
-            f"TPU worker rank {worker_rank}: building eval dataset...",
-            flush=True,
+        _log_event(
+            "main", f"rank={worker_rank} building eval dataset (worker)"
         )
         dataset_val_start = time.time()
         dataset_val, _ = build_dataset(is_train=False, args=args)
-        print(
-            f"TPU worker rank {worker_rank}: eval dataset ready in "
-            f"{time.time() - dataset_val_start:.2f}s",
-            flush=True,
+        _log_event(
+            "main",
+            "rank=%s eval dataset ready in %.2fs (worker)"
+            % (worker_rank, time.time() - dataset_val_start),
         )
     
     # Continue with the rest of the main() function logic
@@ -1204,3 +1236,22 @@ if __name__ == "__main__":
     else:
         # Non-TPU path can run in a single process
         main(args)
+def _log_event(tag: str, message: str) -> None:
+    timestamp = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    entry = f"[{tag}] {timestamp} {message}"
+    try:
+        import torch_xla.core.xla_model as xm  # type: ignore
+
+        xm.master_print(entry, flush=True)
+    except Exception:
+        print(entry, flush=True)
+    log_dir = os.environ.get("TPU_LOG_DIR")
+    if not log_dir:
+        return
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(log_dir, f"{tag}.log")
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(entry + "\n")
+    except OSError:
+        pass
