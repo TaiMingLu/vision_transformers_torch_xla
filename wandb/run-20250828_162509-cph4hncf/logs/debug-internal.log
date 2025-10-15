@@ -1,6 +1,0 @@
-{"time":"2025-08-28T16:25:11.447108687Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
-{"time":"2025-08-28T16:25:11.911489306Z","level":"INFO","msg":"stream: created new stream","id":"cph4hncf"}
-{"time":"2025-08-28T16:25:11.972233281Z","level":"INFO","msg":"stream: started","id":"cph4hncf"}
-{"time":"2025-08-28T16:25:11.972288781Z","level":"INFO","msg":"handler: started","stream_id":"cph4hncf"}
-{"time":"2025-08-28T16:25:11.972340311Z","level":"INFO","msg":"writer: started","stream_id":"cph4hncf"}
-{"time":"2025-08-28T16:25:11.972295371Z","level":"INFO","msg":"sender: started","stream_id":"cph4hncf"}

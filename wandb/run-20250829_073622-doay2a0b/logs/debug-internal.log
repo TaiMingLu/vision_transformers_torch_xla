@@ -1,7 +1,0 @@
-{"time":"2025-08-29T07:36:26.3985941Z","level":"INFO","msg":"stream: starting","core version":"0.21.2"}
-{"time":"2025-08-29T07:36:27.179400859Z","level":"INFO","msg":"stream: created new stream","id":"doay2a0b"}
-{"time":"2025-08-29T07:36:27.298929297Z","level":"INFO","msg":"stream: started","id":"doay2a0b"}
-{"time":"2025-08-29T07:36:27.299012317Z","level":"INFO","msg":"sender: started","stream_id":"doay2a0b"}
-{"time":"2025-08-29T07:36:27.299043127Z","level":"INFO","msg":"handler: started","stream_id":"doay2a0b"}
-{"time":"2025-08-29T07:36:27.299062837Z","level":"INFO","msg":"writer: started","stream_id":"doay2a0b"}
-{"time":"2025-08-29T13:03:00.180419615Z","level":"ERROR","msg":"monitor: error sampling metrics: rpc error: code = Unavailable desc = connection error: desc = \"transport: Error while dialing: dial tcp 127.0.0.1:8431: connect: connection refused\""}

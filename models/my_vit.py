@@ -16,6 +16,10 @@ _CFG_LOOKUP = {
     'my_vit_l': 'vit_large_patch16_224',
 }
 
+for _model_name, _source_key in _CFG_LOOKUP.items():
+    if _model_name not in default_cfgs and _source_key in default_cfgs:
+        default_cfgs[_model_name] = copy.deepcopy(default_cfgs[_source_key])
+
 
 def _apply_default_cfg(model: VisionTransformer, model_name: str) -> VisionTransformer:
     cfg_key = _CFG_LOOKUP.get(model_name)

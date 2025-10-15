@@ -1,8 +1,0 @@
-{"time":"2025-08-29T03:36:50.24451521Z","level":"INFO","msg":"stream: starting","core version":"0.21.2"}
-{"time":"2025-08-29T03:36:51.312876638Z","level":"INFO","msg":"stream: created new stream","id":"g74pq1cr"}
-{"time":"2025-08-29T03:36:51.422523636Z","level":"INFO","msg":"stream: started","id":"g74pq1cr"}
-{"time":"2025-08-29T03:36:51.422569676Z","level":"INFO","msg":"writer: started","stream_id":"g74pq1cr"}
-{"time":"2025-08-29T03:36:51.422602326Z","level":"INFO","msg":"handler: started","stream_id":"g74pq1cr"}
-{"time":"2025-08-29T03:36:51.422614906Z","level":"INFO","msg":"sender: started","stream_id":"g74pq1cr"}
-{"time":"2025-08-29T03:44:10.008778208Z","level":"ERROR","msg":"HTTP error","status":404,"method":"POST","url":"https://api.wandb.ai/files/ttl/tpu-vit/g74pq1cr/file_stream"}
-{"time":"2025-08-29T03:44:10.009030138Z","level":"ERROR+4","msg":"filestream: fatal error: filestream: failed to upload: 404 Not Found path=files/ttl/tpu-vit/g74pq1cr/file_stream: {\"error\":\"project ttl/tpu-vit not found while streaming file\"}"}

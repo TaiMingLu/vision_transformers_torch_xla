@@ -1,6 +1,0 @@
-{"time":"2025-08-28T06:57:11.826018343Z","level":"INFO","msg":"stream: starting","core version":"0.21.1"}
-{"time":"2025-08-28T06:57:12.298764704Z","level":"INFO","msg":"stream: created new stream","id":"fklscjtu"}
-{"time":"2025-08-28T06:57:12.344189421Z","level":"INFO","msg":"stream: started","id":"fklscjtu"}
-{"time":"2025-08-28T06:57:12.344299041Z","level":"INFO","msg":"writer: started","stream_id":"fklscjtu"}
-{"time":"2025-08-28T06:57:12.344208191Z","level":"INFO","msg":"handler: started","stream_id":"fklscjtu"}
-{"time":"2025-08-28T06:57:12.344231671Z","level":"INFO","msg":"sender: started","stream_id":"fklscjtu"}

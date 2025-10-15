@@ -57,6 +57,13 @@ def xla_compile_warmup(model, criterion, optimizer, device, args):
 # print("📁 Importing pathlib...", flush=True)
 from pathlib import Path
 
+# Configure warnings **before** importing timm modules so deprecation
+# notices (e.g. timm.models.layers) are suppressed consistently across
+# TPU workers.
+warnings.filterwarnings(
+    "ignore", category=FutureWarning, module="timm.models.layers"
+)
+
 # print("🎯 Importing timm packages...", flush=True)
 from timm.data.mixup import Mixup
 # from timm.models import create_model
@@ -103,8 +110,6 @@ import torch_xla.runtime as xr
 #   torch.distributed.init_process_group(backend="xla", init_method="xla://")
 import torch_xla.distributed.xla_backend  # import for side-effects; no alias
 # print("   ✅ torch_xla.distributed.xla_backend imported", flush=True)
-
-warnings.filterwarnings("ignore", category=FutureWarning, module="timm.models.layers")
 
 print("🎉 ALL IMPORTS COMPLETED SUCCESSFULLY!", flush=True)
 # if not dist.is_initialized():
