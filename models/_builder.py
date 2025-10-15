@@ -5,14 +5,14 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import torch
 from torch import nn as nn
 from torch.hub import load_state_dict_from_url
 
 from timm.models import _features as _timm_features
+from timm.models import _hub as _timm_hub
 from timm.models._features_fx import FeatureGraphNet
 from timm.models._helpers import load_state_dict
-from timm.models._hub import has_hf_hub, download_cached_file, check_cached_file, load_state_dict_from_hf, \
-    load_state_dict_from_path, load_custom_from_hf
 from timm.models._manipulate import adapt_input_conv
 from timm.models._pretrained import PretrainedCfg
 from timm.models._prune import adapt_model_from_file
@@ -31,6 +31,39 @@ if FeatureGetterNet is None:
             raise RuntimeError(
                 "FeatureGetterNet is unavailable in this timm version. "
                 "Upgrade timm or avoid feature_cls='getter'.")
+
+
+has_hf_hub = getattr(_timm_hub, 'has_hf_hub', lambda necessary=False: False)
+download_cached_file = getattr(_timm_hub, 'download_cached_file', None)
+check_cached_file = getattr(_timm_hub, 'check_cached_file', lambda *args, **kwargs: False)
+load_state_dict_from_hf = getattr(_timm_hub, 'load_state_dict_from_hf', None)
+load_state_dict_from_path = getattr(_timm_hub, 'load_state_dict_from_path', None)
+load_custom_from_hf = getattr(_timm_hub, 'load_custom_from_hf', None)
+
+
+def _raise_missing(name: str) -> Callable:
+    def _missing(*_args, **_kwargs):
+        raise RuntimeError(
+            f"timm.models._hub.{name} is unavailable in the installed timm version. "
+            f"Upgrade timm to use pretrained checkpoints that rely on this helper.")
+
+    return _missing
+
+
+if download_cached_file is None:
+    download_cached_file = _raise_missing('download_cached_file')
+
+if load_state_dict_from_hf is None:
+    load_state_dict_from_hf = _raise_missing('load_state_dict_from_hf')
+
+if load_custom_from_hf is None:
+    load_custom_from_hf = _raise_missing('load_custom_from_hf')
+
+if load_state_dict_from_path is None:
+    def load_state_dict_from_path(path: str, map_location: str | torch.device = 'cpu'):
+        """Fallback that loads a state dict directly from disk when timm lacks helper."""
+
+        return torch.load(path, map_location=map_location)
 
 
 _logger = logging.getLogger(__name__)
