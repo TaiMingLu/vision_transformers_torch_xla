@@ -78,7 +78,7 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --project=${PROJECT_ID} --zone=${ZONE} \
   --worker=all \
   --ssh-key-file="~/.ssh/id_rsa" \
-  --command='source ~/vision_env/bin/activate && python3 -m pip install --upgrade timm==1.0.15'
+  --command='source ~/vision_env/bin/activate && python3 -m pip install --upgrade timm==0.9.16'
 
 
 
