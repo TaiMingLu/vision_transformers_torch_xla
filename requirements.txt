@@ -1,6 +1,11 @@
-torch
-torchvision
-torchaudio
-timm
-wandb
-tensorboard
+torch==2.3.0
+torchvision==0.18.0
+torchaudio==2.3.0
+torch-xla==2.3.0
+numpy==1.26.4
+timm==0.9.16
+wandb==0.16.6
+tensorboard==2.15.1
+tensorflow==2.15.1
+tensorflow-datasets==4.9.3
+big-vision @ git+https://github.com/google-research/big_vision@0ef2f9b09dca3f6683fe3dacdf4306ec8cbfbf09

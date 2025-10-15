@@ -315,7 +315,7 @@ def get_args_parser():
                         help="W&B mode: 'online' for internet connection, 'offline' for local logging, 'disabled' to turn off")
     parser.add_argument('--wandb_dir', type=str, default=None,
                         help="Directory to store W&B offline files (default: ~/.wandb)")
-    parser.add_argument('--project', default='ViT-della', type=str,
+    parser.add_argument('--project', default='ViT-tpu', type=str,
                         help="The name of the W&B project where you're sending the new run.")
     parser.add_argument('--wandb_ckpt', type=str2bool, default=False,
                         help="Save model checkpoints as W&B Artifacts.")
