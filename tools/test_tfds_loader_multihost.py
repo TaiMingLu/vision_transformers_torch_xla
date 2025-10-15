@@ -25,13 +25,80 @@ from pathlib import Path
 from time import perf_counter
 from typing import Dict, List
 
+import sysconfig
 import torch
 
 DEFAULT_TPU_LIBRARY_CANDIDATES = (
     "/lib/libtpu.so",
     "/usr/lib/libtpu.so",
+    "/usr/lib/x86_64-linux-gnu/libtpu.so",
     "/usr/local/lib/libtpu.so",
 )
+
+
+def _libtpu_candidates() -> List[Path]:
+    """Enumerate likely libtpu locations on TPU VM images and wheels."""
+
+    candidates = [Path(path) for path in DEFAULT_TPU_LIBRARY_CANDIDATES]
+
+    env_roots = [
+        os.environ.get("LIBTPU_ROOT"),
+        os.environ.get("TPU_LIBRARY_PATH"),
+    ]
+    for root in env_roots:
+        if root:
+            root_path = Path(root)
+            candidates.append(root_path)
+            candidates.append(root_path / "libtpu.so")
+
+    try:  # site packages contain the pip-installed libtpu wheel
+        import site
+
+        site_dirs = list(site.getsitepackages())
+        user_dir = site.getusersitepackages()
+        if user_dir:
+            site_dirs.append(user_dir)
+        for directory in site_dirs:
+            dir_path = Path(directory)
+            candidates.append(dir_path / "libtpu.so")
+            candidates.append(dir_path / "libtpu" / "libtpu.so")
+    except (ImportError, AttributeError):
+        pass
+
+    sys_paths = {
+        Path(sys.prefix),
+        Path(sys.base_prefix),
+        Path(sysconfig.get_config_var("LIBDIR") or ""),
+        Path(sysconfig.get_config_var("LIBPL") or ""),
+    }
+    for base in sys_paths:
+        if not base:
+            continue
+        candidates.append(base / "libtpu.so")
+        candidates.append(base / "lib" / "libtpu.so")
+        candidates.append(base / "lib64" / "libtpu.so")
+        candidates.append(base / "libtpu" / "libtpu.so")
+
+    spec = importlib.util.find_spec("libtpu")
+    if spec and spec.origin:
+        package_dir = Path(spec.origin).parent
+        candidates.append(package_dir / "libtpu.so")
+        candidates.append(package_dir / "libtpu" / "libtpu.so")
+
+    try:
+        import ctypes.util
+
+        located = ctypes.util.find_library("tpu")
+        if located:
+            if os.path.isabs(located):
+                candidates.append(Path(located))
+            else:
+                candidates.append(Path("/usr/lib") / located)
+                candidates.append(Path("/usr/local/lib") / located)
+    except ImportError:
+        pass
+
+    return candidates
 
 
 def _maybe_configure_pjrt_library() -> None:
@@ -41,10 +108,14 @@ def _maybe_configure_pjrt_library() -> None:
         return
     if os.environ.get("PJRT_TPU_LIBRARY_PATH"):
         return
-    for candidate in DEFAULT_TPU_LIBRARY_CANDIDATES:
-        if Path(candidate).is_file():
-            os.environ["PJRT_TPU_LIBRARY_PATH"] = candidate
+
+    for candidate in _libtpu_candidates():
+        if candidate and candidate.is_file():
+            os.environ["PJRT_TPU_LIBRARY_PATH"] = str(candidate)
+            print(f"Auto-configured PJRT_TPU_LIBRARY_PATH={candidate}", flush=True)
             break
+    else:
+        print("warning: failed to locate libtpu.so automatically; set PJRT_TPU_LIBRARY_PATH manually", flush=True)
 
 
 _maybe_configure_pjrt_library()
