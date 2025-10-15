@@ -44,14 +44,11 @@ gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
   --command='source ~/vision_env/bin/activate && cd ~/vision &&  PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader.py --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds --split train --num-samples 8 --time-it'
 
 gcloud compute tpus tpu-vm ssh terry@${TPU_NAME} \
-    --project=${PROJECT_ID} --zone=${ZONE} --worker=all \
+    --project=${PROJECT_ID} --zone=${ZONE} --worker=0 \
     --ssh-key-file="~/.ssh/id_rsa" \
-    --command=$'source ~/vision_env/bin/activate && \
-               cd ~/vision && \
-               PJRT_DEVICE=TPU \
-               torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py \
-                 --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
-                 --samples-per-loop 128 --num-loops 32'
+    --command="
+     cd ~/vision
+     bash run.sh"
 
 
 

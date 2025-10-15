@@ -8,11 +8,14 @@ loops per worker, checking two invariants:
 2. Throughput stability — per-rank and global throughput must not degrade beyond
    the configured ratio or minimum samples/sec threshold across iterations.
 
-Run with PJRT/TPU via ``torchrun`` or ``xla_dist``. Example::
+Run with PJRT/TPU via ``torch_xla.distributed.xla_dist`` so that multi-host
+process orchestration and TPU topology env vars are populated correctly.
+Example::
 
-    PJRT_DEVICE=TPU torchrun --nproc_per_node=8 tools/test_tfds_loader_multihost.py \
-        --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
-        --split train --samples-per-loop 128 --num-loops 32 --log-every 4
+    python -m torch_xla.distributed.xla_dist --tpu=$TPU_NAME -- \
+        python tools/test_tfds_loader_multihost.py \
+            --data-dir /home/terry/gcs-bucket/Distillation/imagenet_tfds \
+            --split train --samples-per-loop 128 --num-loops 32 --log-every 4
 """
 
 from __future__ import annotations
