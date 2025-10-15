@@ -264,9 +264,9 @@ def execute_main_command(main_command, slices, local_log_dir, zip_name):
       )
 
       worker_main_command = main_command
-      if "--world-size" not in worker_main_command:
+      if "--world-size" not in worker_main_command and "--world_size" not in worker_main_command:
         worker_main_command = f"{worker_main_command} --world-size {total_workers}"
-      if "--rank" not in worker_main_command:
+      if "--rank" not in worker_main_command and "--rank=" not in worker_main_command:
         worker_main_command = f"{worker_main_command} --rank {rank_offset + worker_num}"
 
       if args.USE_EXISTING_FOLDER is False:

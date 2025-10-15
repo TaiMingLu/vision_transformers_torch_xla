@@ -300,6 +300,8 @@ def get_args_parser():
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
+    parser.add_argument('--rank', default=0, type=int,
+                        help='global rank of the current process')
     parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', type=str2bool, default=False)
     parser.add_argument('--dist_url', default='env://',
@@ -1115,4 +1117,3 @@ if __name__ == "__main__":
     else:
         # Non-TPU path can run in a single process
         main(args)
-
