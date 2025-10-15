@@ -241,6 +241,8 @@ def execute_main_command(main_command, slices, local_log_dir, zip_name):
   output_logs = []
   worker_list = []
   os.makedirs(local_log_dir, exist_ok=True)
+  total_workers = sum(cur_slice.num_workers for cur_slice in slices)
+  rank_offset = 0
 
   for slice_num, cur_slice  in enumerate(slices):
     for worker_num in range(cur_slice.num_workers):
@@ -252,12 +254,20 @@ def execute_main_command(main_command, slices, local_log_dir, zip_name):
       unzip_command = f"tar xzf {zip_name}"
       write_kill_script_command = f"echo '{kill_existing_processes_str()}' > {kill_script_name}"
       kill_existing_command = f"bash {kill_script_name} {cur_slice.version}"
+      rank_env_command = (
+          f"export WORLD_SIZE=${{WORLD_SIZE:-{total_workers}}}"
+          f" && export NUM_PROCESSES=${{NUM_PROCESSES:-{total_workers}}}"
+          f" && export RANK=${{RANK:-{rank_offset + worker_num}}}"
+          f" && export PROCESS_INDEX=${{PROCESS_INDEX:-{rank_offset + worker_num}}}"
+          f" && export LOCAL_RANK=${{LOCAL_RANK:-{worker_num}}}"
+          f" && export LOCAL_WORLD_SIZE=${{LOCAL_WORLD_SIZE:-{cur_slice.num_workers}}}"
+      )
 
       if args.USE_EXISTING_FOLDER is False:
         remote_command_list = [mkdir_command , mv_zip_command , cd_command , unzip_command ,
-                        write_kill_script_command , kill_existing_command , main_command]
+                        write_kill_script_command , kill_existing_command , rank_env_command , main_command]
       else:
-        remote_command_list = [cd_command, write_kill_script_command , kill_existing_command , main_command]
+        remote_command_list = [cd_command, write_kill_script_command , kill_existing_command , rank_env_command , main_command]
       remote_command_list_str = " && ".join(remote_command_list)
       print('ssh to worker ', worker_num)
       gcloud_command=[
@@ -268,6 +278,7 @@ def execute_main_command(main_command, slices, local_log_dir, zip_name):
         gcloud_command.append("--internal-ip")
       commands.append(gcloud_command)
       worker_list.append([slice_num, worker_num])
+    rank_offset += cur_slice.num_workers
 
   return_code, return_codes = run_commands(commands, 0, "MAIN COMMAND", worker_list, output_logs=output_logs)
   if return_code > 0:
