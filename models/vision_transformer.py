@@ -63,9 +63,9 @@ from timm.layers import (
     use_fused_attn,
     get_act_layer,
     get_norm_layer,
-    maybe_add_mask,
     LayerType,
 )
+from ._compat import maybe_add_mask
 from ._builder import build_model_with_cfg
 from ._features import feature_take_indices
 from ._manipulate import named_apply, checkpoint, checkpoint_seq, adapt_input_conv
