@@ -10,7 +10,13 @@ import torch.utils.checkpoint
 from torch import nn as nn
 from torch import Tensor
 
-from timm.layers import use_reentrant_ckpt
+try:
+    from timm.layers import use_reentrant_ckpt
+except ImportError:  # older timm releases
+    def use_reentrant_ckpt() -> bool:
+        """Fallback when timm.layers.use_reentrant_ckpt is unavailable."""
+
+        return False
 
 
 __all__ = ['model_parameters', 'named_apply', 'named_modules', 'named_modules_with_params', 'adapt_input_conv',
