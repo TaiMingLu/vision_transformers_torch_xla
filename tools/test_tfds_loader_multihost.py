@@ -21,13 +21,14 @@ Example::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import os
 import re
 import sys
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import sysconfig
 import torch
@@ -201,11 +202,6 @@ def _concat_lists(left: List[str], right: List[str]) -> List[str]:
     return list(left) + list(right)
 
 
-def _merge_rank_series(left: List[Tuple[int, List[float]]],
-                       right: List[Tuple[int, List[float]]]) -> List[Tuple[int, List[float]]]:
-    return list(left) + list(right)
-
-
 def _build_args(data_dir: str,
                 train_pp: str,
                 eval_pp: str,
@@ -328,6 +324,7 @@ def main() -> None:
     local_ids: List[str] = []
     local_throughputs: List[float] = []
     local_seen: set[str] = set()
+    local_id_hashes: List[int] = []
 
     total_samples_per_rank = cli_args.samples_per_loop * cli_args.num_loops
 
@@ -343,6 +340,9 @@ def main() -> None:
             if not isinstance(tfds_id, str):
                 raise TypeError(f"Expected tfds_id to be str, got {type(tfds_id)!r}")
             loop_ids.append(tfds_id)
+            id_digest = hashlib.blake2b(
+                tfds_id.encode('utf-8'), digest_size=8).digest()
+            local_id_hashes.append(int.from_bytes(id_digest, 'big', signed=False))
         elapsed = perf_counter() - start
         throughput = cli_args.samples_per_loop / max(elapsed, 1e-6)
 
@@ -372,27 +372,28 @@ def main() -> None:
 
     device = xm.xla_device()
     loop_tensor = torch.tensor(local_throughputs, dtype=torch.float32, device=device)
-    loop_sums = xm.all_reduce("sum", loop_tensor)
-    global_loop_avg = [value / world_size for value in loop_sums.cpu().tolist()]
+    id_tensor = torch.tensor(local_id_hashes, dtype=torch.int64, device=device)
 
-    per_rank_series = xm.mesh_reduce(
-        "throughput_by_rank",
-        [(rank, local_throughputs)],
-        _merge_rank_series,
-    )
-    all_tfds_ids = xm.mesh_reduce("tfds_ids", local_ids, _concat_lists)
+    gathered_throughputs = xm.all_gather(loop_tensor).cpu()
+    gathered_ids = xm.all_gather(id_tensor).cpu()
+
+    global_loop_avg = gathered_throughputs.mean(dim=0).tolist()
 
     if xm.is_master_ordinal():
         per_rank_throughputs: Dict[int, List[float]] = {
-            worker: series for worker, series in per_rank_series
+            worker: gathered_throughputs[worker].tolist()
+            for worker in range(world_size)
         }
-        expected_total = total_samples_per_rank * world_size
-        if len(all_tfds_ids) != expected_total:
-            raise RuntimeError(
-                f"Expected {expected_total} TFDS ids, gathered {len(all_tfds_ids)}")
 
-        unique_ids = set(all_tfds_ids)
-        duplicates = len(all_tfds_ids) - len(unique_ids)
+        all_tfds_ids = gathered_ids.view(world_size, -1).numpy().tolist()
+        flat_ids = [item for sublist in all_tfds_ids for item in sublist]
+        expected_total = total_samples_per_rank * world_size
+        if len(flat_ids) != expected_total:
+            raise RuntimeError(
+                f"Expected {expected_total} TFDS ids, gathered {len(flat_ids)}")
+
+        unique_ids = set(flat_ids)
+        duplicates = len(flat_ids) - len(unique_ids)
         if duplicates:
             raise RuntimeError(
                 f"Detected {duplicates} duplicate TFDS ids across ranks; sharding is incorrect")
