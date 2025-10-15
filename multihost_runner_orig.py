@@ -263,11 +263,17 @@ def execute_main_command(main_command, slices, local_log_dir, zip_name):
           f" && export LOCAL_WORLD_SIZE=${{LOCAL_WORLD_SIZE:-{cur_slice.num_workers}}}"
       )
 
+      worker_main_command = main_command
+      if "--world-size" not in worker_main_command:
+        worker_main_command = f"{worker_main_command} --world-size {total_workers}"
+      if "--rank" not in worker_main_command:
+        worker_main_command = f"{worker_main_command} --rank {rank_offset + worker_num}"
+
       if args.USE_EXISTING_FOLDER is False:
         remote_command_list = [mkdir_command , mv_zip_command , cd_command , unzip_command ,
-                        write_kill_script_command , kill_existing_command , rank_env_command , main_command]
+                        write_kill_script_command , kill_existing_command , rank_env_command , worker_main_command]
       else:
-        remote_command_list = [cd_command, write_kill_script_command , kill_existing_command , rank_env_command , main_command]
+        remote_command_list = [cd_command, write_kill_script_command , kill_existing_command , rank_env_command , worker_main_command]
       remote_command_list_str = " && ".join(remote_command_list)
       print('ssh to worker ', worker_num)
       gcloud_command=[
