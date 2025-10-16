@@ -47,7 +47,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     optimizer.zero_grad()
     step_timer = time.time()
     print("About to start data loader loop...", flush=True)
-    
+    if tpu:
+        rank = utils.get_rank()
+        xm.master_print(f"[train] rank={rank} entering epoch {epoch}", flush=True)
+
     # For TPU, bypass metric_logger.log_every to reduce overhead
     if tpu:
         print("TPU mode: Using direct DataLoader enumeration to avoid metric_logger overhead", flush=True)
@@ -178,13 +181,21 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             
             xla_step_time = time.time() - xla_step_start
             # print(f"🔥 Total XLA step time: {xla_step_time:.3f}s", flush=True)
-            
+
             # Move EMA outside XLA context to avoid graph complications
             if (data_iter_step + 1) % update_freq == 0 and model_ema is not None:
                 ema_start = time.time()
                 model_ema.update(model)
                 ema_time = time.time() - ema_start
                 # print(f"✅ EMA update in {ema_time:.3f}s", flush=True)
+
+            if tpu:
+                should_log_step = data_iter_step < 5 or (data_iter_step + 1) % 100 == 0
+                if should_log_step:
+                    xm.master_print(
+                        f"[train] rank={rank} iter={data_iter_step} step={step} loss={float(loss.item())}",
+                        flush=True,
+                    )
             
             # Print timing breakdown for first few iterations and update end time for all iterations
             # if data_iter_step < 20:
