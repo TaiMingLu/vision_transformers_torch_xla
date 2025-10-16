@@ -201,13 +201,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                 ema_time = time.time() - ema_start
                 # print(f"✅ EMA update in {ema_time:.3f}s", flush=True)
 
-            if tpu:
-                should_log_step = data_iter_step < 5 or (data_iter_step + 1) % 100 == 0
-                if should_log_step:
-                    _train_log(
-                        f"iter={data_iter_step} step={step} loss={float(loss.item())} step_time={total_iteration_time:.2f}s"
-                    )
-            
             # Print timing breakdown for first few iterations and update end time for all iterations
             # if data_iter_step < 20:
             #     step_end = time.time()
@@ -217,6 +210,13 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             # Always update the last iteration end time for accurate DataLoader timing
             train_one_epoch._last_iteration_end = time.time()
             total_iteration_time = train_one_epoch._last_iteration_end - iteration_start
+
+            if tpu:
+                should_log_step = data_iter_step < 5 or (data_iter_step + 1) % 100 == 0
+                if should_log_step:
+                    _train_log(
+                        f"iter={data_iter_step} step={step} loss={float(loss.item())} step_time={total_iteration_time:.2f}s"
+                    )
             
             # Manual logging for TPU (since we bypass metric_logger.log_every)
             if tpu and data_iter_step % print_freq == 0:
