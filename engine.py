@@ -47,9 +47,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     optimizer.zero_grad()
     step_timer = time.time()
     print("About to start data loader loop...", flush=True)
+    rank = utils.get_rank()
+
+    def _train_log(message: str) -> None:
+        stamp = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        print(f"[train][{stamp}] rank={rank} {message}", flush=True)
+
     if tpu:
-        rank = utils.get_rank()
-        print(f"[train] rank={rank} entering epoch {epoch}", flush=True)
+        total_batches = len(data_loader) if hasattr(data_loader, "__len__") else "unknown"
+        _train_log(f"entering epoch {epoch} total_batches={total_batches}")
 
     # For TPU, bypass metric_logger.log_every to reduce overhead
     if tpu:
@@ -174,7 +180,13 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     
                     # print(f"About to run optimizer step...", flush=True)
                     optim_start = time.time()
+                    if tpu:
+                        _train_log(f"iter={data_iter_step} step={step} optimizer_step start")
                     xm.optimizer_step(optimizer, barrier=True)  # does all-reduce + mark_step
+                    if tpu:
+                        _train_log(
+                            f"iter={data_iter_step} step={step} optimizer_step done in {time.time() - optim_start:.2f}s"
+                        )
                     optimizer.zero_grad()
                     optim_time = time.time() - optim_start
                     # print(f"✅ Optimizer step completed in {optim_time:.3f}s", flush=True)
@@ -192,9 +204,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             if tpu:
                 should_log_step = data_iter_step < 5 or (data_iter_step + 1) % 100 == 0
                 if should_log_step:
-                    print(
-                        f"[train] rank={rank} iter={data_iter_step} step={step} loss={float(loss.item())}",
-                        flush=True,
+                    _train_log(
+                        f"iter={data_iter_step} step={step} loss={float(loss.item())} step_time={total_iteration_time:.2f}s"
                     )
             
             # Print timing breakdown for first few iterations and update end time for all iterations
