@@ -341,6 +341,20 @@ def evaluate(data_loader, model, device, use_amp=False, tpu: bool = False):
     criterion = torch.nn.CrossEntropyLoss()
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
+
+    original_device = None
+    restored_to_cpu = False
+    try:
+        param = next(model.parameters())
+        original_device = param.device
+    except StopIteration:
+        original_device = torch.device('cpu')
+
+    if tpu and original_device.type != device.type:
+        print(f"[eval] moving model from {original_device} to {device}", flush=True)
+        model = model.to(device)
+        restored_to_cpu = True
+
     model.eval()
 
     if tpu:
@@ -407,6 +421,9 @@ def evaluate(data_loader, model, device, use_amp=False, tpu: bool = False):
                 print(f"✅ Validation batch {batch_idx} completed in {val_iteration_total_time:.3f}s", flush=True)
 
     metric_logger.synchronize_between_processes()
+    if tpu and restored_to_cpu:
+        print(f"[eval] moving model back to {original_device}", flush=True)
+        model.to(original_device)
     print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.meters['acc1'], top5=metric_logger.meters['acc5'],
                   losses=metric_logger.meters['loss']))
