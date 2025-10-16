@@ -49,7 +49,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     print("About to start data loader loop...", flush=True)
     if tpu:
         rank = utils.get_rank()
-        xm.master_print(f"[train] rank={rank} entering epoch {epoch}", flush=True)
+        print(f"[train] rank={rank} entering epoch {epoch}", flush=True)
 
     # For TPU, bypass metric_logger.log_every to reduce overhead
     if tpu:
@@ -192,7 +192,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             if tpu:
                 should_log_step = data_iter_step < 5 or (data_iter_step + 1) % 100 == 0
                 if should_log_step:
-                    xm.master_print(
+                    print(
                         f"[train] rank={rank} iter={data_iter_step} step={step} loss={float(loss.item())}",
                         flush=True,
                     )

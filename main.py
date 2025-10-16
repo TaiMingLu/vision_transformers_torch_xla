@@ -5,25 +5,25 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-# print("🚀 Starting main.py import phase...", flush=True)
+print("🚀 Starting main.py import phase...", flush=True)
 
-# print("📦 Importing basic packages...", flush=True)
+print("📦 Importing basic packages...", flush=True)
 import argparse
 import datetime
 import numpy as np
 import time
 import warnings
-# print("🔥 Importing torch...", flush=True)
+print("🔥 Importing torch...", flush=True)
 import torch
 import torch.nn as nn
 # import torch.backends.cudnn as cudnn
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
-# print("🌐 Importing torch.distributed...", flush=True)
+print("🌐 Importing torch.distributed...", flush=True)
 import torch.distributed as dist  ### Added for TPU
 import json
 import os
-# print("✅ Basic imports completed", flush=True)
+print("✅ Basic imports completed", flush=True)
 
 # --- XLA + I/O env sanity (add near the top, after imports) ---
 os.environ.setdefault("PJRT_DEVICE", "TPU")
@@ -54,7 +54,7 @@ def xla_compile_warmup(model, criterion, optimizer, device, args):
     loss.backward()
     xm.optimizer_step(optimizer, barrier=True)  # compiles + executes once
 
-# print("📁 Importing pathlib...", flush=True)
+print("📁 Importing pathlib...", flush=True)
 from pathlib import Path
 
 # Configure warnings **before** importing timm modules so deprecation
@@ -64,52 +64,52 @@ warnings.filterwarnings(
     "ignore", category=FutureWarning, module="timm.models.layers"
 )
 
-# print("🎯 Importing timm packages...", flush=True)
+print("🎯 Importing timm packages...", flush=True)
 from timm.data.mixup import Mixup
 # from timm.models import create_model
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 from timm.utils import ModelEma
-# print("   ✅ timm packages imported", flush=True)
+print("   ✅ timm packages imported", flush=True)
 
-# print("🏭 Importing local modules...", flush=True)
+print("🏭 Importing local modules...", flush=True)
 from optim_factory import create_optimizer, LayerDecayValueAssigner
-# print("   ✅ optim_factory imported", flush=True)
+print("   ✅ optim_factory imported", flush=True)
 from models import create_model
-# print("   ✅ models imported", flush=True)
+print("   ✅ models imported", flush=True)
 
-# print("📊 Importing datasets...", flush=True)
+print("📊 Importing datasets...", flush=True)
 from datasets import build_dataset, BigVisionImageNetDataset
-# print("   ✅ datasets imported", flush=True)
+print("   ✅ datasets imported", flush=True)
 from engine import train_one_epoch, evaluate
-# print("   ✅ engine imported", flush=True)
+print("   ✅ engine imported", flush=True)
 
 from utils import NativeScalerWithGradNormCount as NativeScaler
 import utils
-# print("   ✅ utils imported", flush=True)
+print("   ✅ utils imported", flush=True)
 
 
 
-# print("🔥 Importing torch_xla packages...", flush=True)
+print("🔥 Importing torch_xla packages...", flush=True)
 # Always safe to import
 import torch_xla                      # core package (optional but fine)
-# print("   ✅ torch_xla core imported", flush=True)
+print("   ✅ torch_xla core imported", flush=True)
 
 # Device helpers: xla:0 handle, mark_step(), optimizer_step(), ordinals, etc.
 import torch_xla.core.xla_model as xm
-# print("   ✅ torch_xla.core.xla_model imported", flush=True)
+print("   ✅ torch_xla.core.xla_model imported", flush=True)
 
 # Multiprocess launcher (spawn one process per TPU core)
 import torch_xla.distributed.xla_multiprocessing as xmp
-# print("   ✅ torch_xla.distributed.xla_multiprocessing imported", flush=True)
+print("   ✅ torch_xla.distributed.xla_multiprocessing imported", flush=True)
 
 # Runtime info (global device count, global ordinal, device type, etc.)
 import torch_xla.runtime as xr
-# print("   ✅ torch_xla.runtime imported", flush=True)
+print("   ✅ torch_xla.runtime imported", flush=True)
 
 # Registers the 'xla' torch.distributed backend. Required *before* calling:
 #   torch.distributed.init_process_group(backend="xla", init_method="xla://")
 import torch_xla.distributed.xla_backend  # import for side-effects; no alias
-# print("   ✅ torch_xla.distributed.xla_backend imported", flush=True)
+print("   ✅ torch_xla.distributed.xla_backend imported", flush=True)
 
 print("🎉 ALL IMPORTS COMPLETED SUCCESSFULLY!", flush=True)
 # if not dist.is_initialized():
@@ -762,12 +762,12 @@ def main(args):
         xm.mark_step()  # Force XLA synchronization
         print("XLA mark_step() completed")
     
-    # print("Model = %s" % str(model_without_ddp))
-    # print("Model architecture printed successfully")
+    print("Model = %s" % str(model_without_ddp))
+    print("Model architecture printed successfully")
     
     # # Count parameters carefully for XLA
-    # print("About to count model parameters...")
-    # print("Counting model parameters...")
+    print("About to count model parameters...")
+    print("Counting model parameters...")
     # if args.tpu:
     #     # For TPU, count parameters on CPU to avoid XLA compilation issues
     #     print("TPU mode: Moving model to CPU temporarily for parameter counting...")
